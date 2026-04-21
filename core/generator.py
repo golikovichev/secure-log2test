@@ -1,7 +1,9 @@
 import logging
 from pathlib import Path
 from typing import List, Optional
+
 from jinja2 import Environment, FileSystemLoader
+
 from core.parser import LogEntry
 
 logger = logging.getLogger(__name__)
