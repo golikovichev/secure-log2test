@@ -1,0 +1,40 @@
+{
+  "hits": {
+    "hits": [
+      {
+        "_source": {
+          "url": "/api/v1/orders",
+          "method": "GET",
+          "status": 200,
+          "duration": 87
+        }
+      },
+      {
+        "_source": {
+          "url": "/api/v1/orders",
+          "method": "POST",
+          "status": 201,
+          "duration": 143.5,
+          "request_body": {"product_id": "SKU-001", "quantity": 2}
+        }
+      },
+      {
+        "_source": {
+          "url": "/api/v1/auth/login",
+          "method": "POST",
+          "status": 200,
+          "duration": 210,
+          "request_body": {"username": "qa_user"}
+        }
+      },
+      {
+        "_source": {
+          "url": "/api/v1/products/99",
+          "method": "GET",
+          "status": 404,
+          "duration": 12
+        }
+      }
+    ]
+  }
+}
