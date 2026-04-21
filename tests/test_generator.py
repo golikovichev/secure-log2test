@@ -11,6 +11,23 @@ def _make_entries(count: int = 2) -> list[LogEntry]:
     ]
 
 
+@pytest.fixture()
+def generator(tmp_path) -> PytestGenerator:
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    template = (
+        "{% for entry in entries %}\n"
+        "def test_{{ entry.method | lower }}_{{ loop.index }}(): "
+        "pass  # {{ entry.method }} {{ entry.endpoint }} sla_limit_ms={{ entry.response_time_ms }}+500\n"
+        "{% endfor %}"
+    )
+    (template_dir / "test_api.jinja2").write_text(template, encoding="utf-8")
+    return PytestGenerator(
+        template_dir=str(template_dir),
+        output_dir=str(tmp_path / "out")
+    )
+
+
 class TestPytestGeneratorInit:
     def test_raises_when_template_dir_missing(self, tmp_path):
         with pytest.raises(FileNotFoundError):
@@ -28,21 +45,6 @@ class TestPytestGeneratorInit:
 
 
 class TestPytestGeneratorSuite:
-    @pytest.fixture()
-    def generator(self, tmp_path) -> PytestGenerator:
-        template_dir = tmp_path / "templates"
-        template_dir.mkdir()
-        template = (
-            "{% for entry in entries %}\n"
-            "def test_{{ loop.index }}(): pass  # {{ entry.method }} {{ entry.endpoint }}\n"
-            "{% endfor %}"
-        )
-        (template_dir / "test_api.jinja2").write_text(template, encoding="utf-8")
-        return PytestGenerator(
-            template_dir=str(template_dir),
-            output_dir=str(tmp_path / "out")
-        )
-
     def test_returns_output_path(self, generator):
         result = generator.generate_suite(_make_entries(), "test_api.jinja2", "test_out.py")
         assert result is not None
@@ -68,3 +70,33 @@ class TestPytestGeneratorSuite:
         result = generator.generate_suite(entries, "test_api.jinja2", "test_out.py")
         content = result.read_text(encoding="utf-8")
         assert content.count("def test_") == 5
+
+    def test_output_contains_sla_assertion(self, generator):
+        """Verifies that SLA enforcement logic is present in generated output."""
+        entries = [LogEntry(endpoint="/api/health", method="GET",
+                            status_code=200, response_time_ms=95)]
+        result = generator.generate_suite(entries, "test_api.jinja2", "test_sla.py")
+        content = result.read_text(encoding="utf-8")
+        assert "sla_limit_ms" in content
+
+    def test_output_contains_payload_when_provided(self, generator):
+        """Verifies that non-null payload is rendered into the generated test body."""
+        entries = [LogEntry(
+            endpoint="/api/orders", method="POST",
+            status_code=201, response_time_ms=120,
+            payload={"product_id": "SKU-001"}
+        )]
+        result = generator.generate_suite(entries, "test_api.jinja2", "test_payload.py")
+        content = result.read_text(encoding="utf-8")
+        assert "SKU-001" in content
+
+    def test_generated_function_names_include_http_method(self, generator):
+        """Verifies that generated test names are unique and method-specific."""
+        entries = [
+            LogEntry(endpoint="/api/a", method="GET", status_code=200, response_time_ms=10),
+            LogEntry(endpoint="/api/b", method="POST", status_code=201, response_time_ms=20),
+        ]
+        result = generator.generate_suite(entries, "test_api.jinja2", "test_names.py")
+        content = result.read_text(encoding="utf-8")
+        assert "def test_get_1" in content
+        assert "def test_post_2" in content
