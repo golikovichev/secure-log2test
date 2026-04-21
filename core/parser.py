@@ -2,25 +2,30 @@ import json
 import logging
 from pathlib import Path
 from typing import List, Optional
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, field_validator
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 class LogEntry(BaseModel):
-    """Data Transfer Object for parsed API logs."""
+    """Data Transfer Object for a single parsed API log record."""
     endpoint: str
     method: str
     status_code: int
     payload: Optional[dict] = None
     response_time_ms: int
 
+    @field_validator("response_time_ms", mode="before")
+    @classmethod
+    def coerce_duration_to_int(cls, v):
+        """Kibana may emit duration as a float (e.g. 123.7ms). Truncate to int."""
+        return int(v)
+
 
 class KibanaLogParser:
     """
     Parses Kibana/Elasticsearch JSON exports deterministically.
-    Ensures no PII/NDA data leaves the local enterprise perimeter.
+    Ensures no PII or NDA data leaves the local enterprise perimeter.
     """
 
     def __init__(self, file_path: str):
@@ -34,7 +39,6 @@ class KibanaLogParser:
             with open(self.file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-                # Assuming standard Elasticsearch hit structure
                 hits = data.get("hits", {}).get("hits", [])
                 if not hits:
                     logger.warning("No hits found in the provided JSON log.")
@@ -64,8 +68,3 @@ class KibanaLogParser:
 
         logger.info(f"Successfully parsed {len(parsed_entries)} valid log entries.")
         return parsed_entries
-
-
-# Optional block for local manual testing
-if __name__ == "__main__":
-    pass
