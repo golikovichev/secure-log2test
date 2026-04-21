@@ -11,7 +11,6 @@ class PytestGenerator:
     """
     Generates deterministic pytest suites from parsed log entries.
     Designed for zero-data-leakage enterprise environments.
-    Enterprise QA Automation Evidence.
     """
 
     def __init__(self, template_dir: str = "templates", output_dir: str = "generated_tests"):
