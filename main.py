@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def main():
     """
     CLI Entrypoint for Secure Log2Test Engine.
-    Enterprise QA Automation Evidence.
+  
     """
     parser = argparse.ArgumentParser(
         description="Deterministic AI-free API Test Generator for Enterprise environments.")
