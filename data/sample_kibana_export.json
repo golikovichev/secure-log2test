@@ -1,0 +1,39 @@
+{
+  "hits": {
+    "total": {"value": 4, "relation": "eq"},
+    "hits": [
+      {
+        "_source": {
+          "method": "GET",
+          "url": "/api/v1/users",
+          "status": 200,
+          "duration": 42
+        }
+      },
+      {
+        "_source": {
+          "method": "POST",
+          "url": "/api/v1/users",
+          "status": 201,
+          "duration": 110
+        }
+      },
+      {
+        "_source": {
+          "method": "PUT",
+          "url": "/api/v1/users/42",
+          "status": 204,
+          "duration": 87
+        }
+      },
+      {
+        "_source": {
+          "method": "DELETE",
+          "url": "/api/v1/users/99",
+          "status": 404,
+          "duration": 21
+        }
+      }
+    ]
+  }
+}
