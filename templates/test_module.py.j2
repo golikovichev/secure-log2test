@@ -1,0 +1,20 @@
+"""Auto-generated regression suite. Do not edit by hand."""
+
+import pytest
+import requests
+
+
+BASE_URL = "{{ base_url }}"
+
+
+{% for entry in entries %}
+def test_{{ entry.method | lower }}_{{ entry.url | slug }}_{{ loop.index }}():
+    response = requests.request(
+        method="{{ entry.method }}",
+        url=BASE_URL + "{{ entry.url }}",
+        timeout=10,
+    )
+    assert response.status_code == {{ entry.status }}
+
+
+{% endfor %}

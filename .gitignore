@@ -33,3 +33,4 @@ Thumbs.db
 
 # Generated output
 generated_tests/
+tests_generated.py
