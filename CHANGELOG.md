@@ -5,9 +5,19 @@ All notable changes to this project will be documented here. Format is loosely b
 ## [Unreleased]
 
 ### Added
+- `pyproject.toml` with PEP 621 metadata, hatchling build backend, console-script entry point.
+- `secure-log2test` console command available after `pip install -e .` or `pip install secure-log2test` (post-PyPI publish).
+- `python -m secure_log2test` invocation via `__main__.py`.
+- Python 3.12 added to CI matrix.
 - CONTRIBUTING guide for issue reports and pull requests.
 - MIT license file.
 - This changelog.
+
+### Changed
+- Repackaged into `secure_log2test/` Python package. `core/` moved to `secure_log2test/core/`. `templates/` moved to `secure_log2test/templates/`.
+- `main.py` removed at top level; CLI entry now lives in `secure_log2test/cli.py`.
+- CI workflow installs the project as a package (`pip install -e ".[dev]"`) and exercises the installed CLI.
+- Test imports updated to reference `secure_log2test.core.parser`.
 
 ## [0.2.0] - 2026-05-05
 

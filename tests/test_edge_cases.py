@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from core.parser import (
+from secure_log2test.core.parser import (
     KibanaLogEntry,
     KibanaLogParser,
     REDACTED,

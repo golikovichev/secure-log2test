@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "secure-log2test"
+version = "0.2.0"
+description = "Convert Kibana API log exports into runnable pytest suites with auth header redaction."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Mikhail Golikov", email = "golikovichev@gmail.com" },
+]
+maintainers = [
+    { name = "Mikhail Golikov", email = "golikovichev@gmail.com" },
+]
+keywords = [
+    "kibana",
+    "pytest",
+    "test-generation",
+    "api-testing",
+    "log-parsing",
+    "qa",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "pydantic>=2.0",
+    "jinja2>=3.1",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "build>=1.0",
+    "twine>=4.0",
+]
+
+[project.scripts]
+secure-log2test = "secure_log2test.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/golikovichev/secure-log2test"
+Repository = "https://github.com/golikovichev/secure-log2test"
+Issues = "https://github.com/golikovichev/secure-log2test/issues"
+Changelog = "https://github.com/golikovichev/secure-log2test/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["secure_log2test"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "secure_log2test/",
+    "tests/",
+    "data/sample_kibana_export.json",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

@@ -1,14 +1,23 @@
+"""CLI entry for secure-log2test.
+
+Wired through `console_scripts` entry в pyproject.toml so installs expose
+a `secure-log2test` command. Also runnable via `python -m secure_log2test`.
+"""
+
+from __future__ import annotations
+
 import argparse
 import logging
 import sys
 from pathlib import Path
 
-from core.parser import KibanaLogParser
-from core.generator import KibanaTestGenerator
+from .core.generator import KibanaTestGenerator
+from .core.parser import KibanaLogParser
 
 
-def main():
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
+        prog="secure-log2test",
         description="Convert Kibana API log export to executable pytest suite",
     )
     parser.add_argument("input", type=Path, help="Path to Kibana JSON export")
@@ -27,10 +36,10 @@ def main():
         "--templates",
         type=Path,
         default=Path(__file__).parent / "templates",
-        help="Templates directory (default: ./templates)",
+        help="Templates directory (default: bundled package templates)",
     )
     parser.add_argument("--verbose", action="store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from core.parser import KibanaLogEntry, KibanaLogParser
+from secure_log2test.core.parser import KibanaLogEntry, KibanaLogParser
 
 
 SAMPLE = Path(__file__).parent.parent / "data" / "sample_kibana_export.json"

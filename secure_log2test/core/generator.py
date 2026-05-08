@@ -4,7 +4,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from core.parser import KibanaLogEntry
+from .parser import KibanaLogEntry
 
 
 logger = logging.getLogger(__name__)
