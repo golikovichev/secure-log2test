@@ -1,5 +1,9 @@
 # secure-log2test
 
+[![CI](https://github.com/golikovichev/secure-log2test/actions/workflows/ci.yml/badge.svg)](https://github.com/golikovichev/secure-log2test/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://pypi.org/project/secure-log2test/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Turn a Kibana API log export into an executable pytest suite. Auth headers redacted by default.
 
 Status: alpha. v1.0.0 lands May 2026.
