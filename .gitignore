@@ -34,3 +34,6 @@ Thumbs.db
 # Generated output
 generated_tests/
 tests_generated.py
+
+# Local release runbooks (not for public repo)
+PUBLISH_*.md
