@@ -117,8 +117,8 @@ Never commit a generated suite that includes real production tokens. The redacti
 
 ## Contributing
 
-Issue templates and PR guidance live in `CONTRIBUTING.md`. Bug reports with a redacted sample log are the most useful kind.
+Issue templates and PR guidance live in [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports with a redacted sample log are the most useful kind.
 
 ## Licence
 
-MIT. See `LICENSE`.
+MIT. See [LICENSE](LICENSE).
