@@ -4,6 +4,10 @@ All notable changes to this project will be documented here. Format is loosely b
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-05-10
+
+First stable release. Public API surface (CLI flags, JSON input shape, generated test layout) is now considered stable. Future minor versions will add features without breaking existing usage.
+
 ### Added
 - `pyproject.toml` with PEP 621 metadata, hatchling build backend, console-script entry point.
 - `secure-log2test` console command available after `pip install -e .` or `pip install secure-log2test` (post-PyPI publish).
@@ -12,12 +16,15 @@ All notable changes to this project will be documented here. Format is loosely b
 - CONTRIBUTING guide for issue reports and pull requests.
 - MIT license file.
 - This changelog.
+- README badges for CI status, supported Python versions, and licence.
+- Self-roadmap GitHub issues for v1.1 (response body assertions, schema match) and v1.2 (custom redaction rules via config file).
 
 ### Changed
 - Repackaged into `secure_log2test/` Python package. `core/` moved to `secure_log2test/core/`. `templates/` moved to `secure_log2test/templates/`.
 - `main.py` removed at top level; CLI entry now lives in `secure_log2test/cli.py`.
 - CI workflow installs the project as a package (`pip install -e ".[dev]"`) and exercises the installed CLI.
 - Test imports updated to reference `secure_log2test.core.parser`.
+- `secure_log2test.__version__` now reads from installed package metadata via `importlib.metadata`, so it always matches the wheel version. Previously hardcoded.
 
 ## [0.2.0] - 2026-05-05
 
