@@ -41,7 +41,7 @@ jobs:
         run: |
           pip install build
           python -m build
-          ls -la dist/
+          ls dist/
 
       - name: Wheel install smoke (fresh venv, no source files) [Linux/macOS]
         if: runner.os != 'Windows'
