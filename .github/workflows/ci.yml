@@ -41,3 +41,12 @@ jobs:
           pip install build
           python -m build
           ls -la dist/
+
+      - name: Wheel install smoke (fresh venv, no source files)
+        run: |
+          python -m venv /tmp/wheel-smoke-venv
+          /tmp/wheel-smoke-venv/bin/pip install --upgrade pip
+          /tmp/wheel-smoke-venv/bin/pip install dist/*.whl
+          /tmp/wheel-smoke-venv/bin/secure-log2test --help
+          /tmp/wheel-smoke-venv/bin/secure-log2test data/sample_kibana_export.json --output /tmp/wheel_smoke_out.py
+          python -c "import ast; ast.parse(open('/tmp/wheel_smoke_out.py').read())"
