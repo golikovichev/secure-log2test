@@ -47,7 +47,6 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           python -m venv /tmp/wheel-smoke-venv
-          /tmp/wheel-smoke-venv/bin/pip install --upgrade pip
           /tmp/wheel-smoke-venv/bin/pip install dist/*.whl
           /tmp/wheel-smoke-venv/bin/secure-log2test --help
           /tmp/wheel-smoke-venv/bin/secure-log2test data/sample_kibana_export.json --output /tmp/wheel_smoke_out.py
@@ -58,7 +57,6 @@ jobs:
         shell: bash
         run: |
           python -m venv /tmp/wheel-smoke-venv
-          /tmp/wheel-smoke-venv/Scripts/pip install --upgrade pip
           /tmp/wheel-smoke-venv/Scripts/pip install dist/*.whl
           /tmp/wheel-smoke-venv/Scripts/secure-log2test --help
           /tmp/wheel-smoke-venv/Scripts/secure-log2test data/sample_kibana_export.json --output /tmp/wheel_smoke_out.py
