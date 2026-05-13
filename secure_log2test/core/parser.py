@@ -60,8 +60,38 @@ class KibanaLogParser:
         self.path = Path(path)
 
     def parse(self):
-        with open(self.path) as f:
-            data = json.load(f)
+        try:
+            with open(self.path, encoding="utf-8-sig") as f:
+                data = json.load(f)
+        except UnicodeDecodeError as e:
+            raise ValueError(
+                f"Could not decode {self.path} as utf-8. "
+                f"Kibana JSON exports should be utf-8 per RFC 8259. "
+                f"Original error: {e}"
+            ) from e
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"{self.path} is not valid JSON: {e}"
+            ) from e
+
+        if not isinstance(data, dict) or "hits" not in data:
+            hint = ""
+            if (
+                isinstance(data, list)
+                and data
+                and isinstance(data[0], dict)
+                and "line" in data[0]
+                and "fields" in data[0]
+            ):
+                hint = (
+                    " The file looks like a Grafana Loki Explore export "
+                    "(top-level array with line/timestamp/fields keys). "
+                    "That format is tracked in issue #4 and not yet supported."
+                )
+            raise ValueError(
+                f"Expected Kibana ES export shape with top-level "
+                f"hits.hits[], got {type(data).__name__}.{hint}"
+            )
 
         entries = []
         for hit in data.get("hits", {}).get("hits", []):

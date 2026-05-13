@@ -4,6 +4,20 @@ All notable changes to this project will be documented here. Format is loosely b
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-12
+
+### Fixed
+- Parser now opens input files with explicit `encoding="utf-8-sig"`. On Windows the default file encoding is cp1252, so any input containing non-ASCII characters (Cyrillic, CJK, accented Latin, emoji, etc.) crashed with `UnicodeDecodeError` before the format check ran. Linux and macOS hid the bug because their default is already utf-8. Closes #3.
+- `utf-8-sig` accepts both BOM and non-BOM utf-8 inputs, so files saved by Windows tools (Notepad, some Excel CSV exports) load cleanly.
+
+### Changed
+- When the input does not match the Kibana ES export shape (top-level `hits.hits[]`), the parser now raises `ValueError` with a clear diagnostic instead of silently returning zero entries.
+- If the input looks like a Grafana Loki Explore export (top-level array with `line` / `timestamp` / `fields` keys), the error message points at issue #4 where Loki support is tracked.
+- Invalid JSON now raises `ValueError` with the file path included.
+
+### Added
+- `tests/test_input_validation.py` with eight new test cases: Cyrillic in URL and body, CJK characters in URL, emoji in body, Loki shape detection, plain non-Kibana array, empty object, invalid JSON, utf-8 BOM input. Test suite is now 33 tests, up from 25.
+
 ## [1.0.0] - 2026-05-10
 
 First stable release. Public API surface (CLI flags, JSON input shape, generated test layout) is now considered stable. Future minor versions will add features without breaking existing usage.
