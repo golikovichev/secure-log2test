@@ -4,7 +4,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .parser import KibanaLogEntry
+from .parser import KibanaLogEntry, REDACTED
 
 
 logger = logging.getLogger(__name__)
@@ -18,15 +18,26 @@ def _slugify(value):
 
 
 def _python_repr(value):
-    """Render value as a safe Python string literal.
+    """Render value as a safe Python literal.
 
     Generated tests are executed by the user via pytest. Without repr()
     the template inlines log entry strings as raw Python source, so a
     captured URL containing a quote or backslash can produce invalid or
     arbitrary code. repr() escapes everything correctly and emits a
-    quoted literal the parser will accept.
+    quoted literal the parser will accept. For dicts and lists repr()
+    also produces a valid Python literal.
     """
     return repr(value)
+
+
+def _is_json_body(value):
+    """Body should be sent as `json=` argument (dict or list)."""
+    return isinstance(value, (dict, list))
+
+
+def _is_string_body(value):
+    """Body should be sent as `data=` argument (non-empty string)."""
+    return isinstance(value, str) and bool(value)
 
 
 class KibanaTestGenerator:
@@ -42,6 +53,8 @@ class KibanaTestGenerator:
         )
         self.env.filters["slug"] = _slugify
         self.env.filters["python_repr"] = _python_repr
+        self.env.tests["json_body"] = _is_json_body
+        self.env.tests["string_body"] = _is_string_body
 
     def render(self, entries, base_url=""):
         template = self.env.get_template("test_module.py.j2")
@@ -51,7 +64,11 @@ class KibanaTestGenerator:
                 cleaned.append(e)
             else:
                 cleaned.append(KibanaLogEntry(**e))
-        return template.render(entries=cleaned, base_url=base_url)
+        return template.render(
+            entries=cleaned,
+            base_url=base_url,
+            redacted_marker=REDACTED,
+        )
 
     def write(self, entries, output_path, base_url=""):
         output_path = Path(output_path)

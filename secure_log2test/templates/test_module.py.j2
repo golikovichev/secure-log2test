@@ -1,4 +1,10 @@
-"""Auto-generated regression suite. Do not edit by hand."""
+"""Auto-generated regression suite. Do not edit by hand.
+
+Sensitive header values were replaced with the marker {{ redacted_marker | python_repr }}
+during generation. Before running these tests against a real environment,
+provide real credentials via environment variables or a fixture and
+override the redacted entries in `headers={...}` below.
+"""
 
 import pytest
 import requests
@@ -12,6 +18,14 @@ def test_{{ entry.method | slug }}_{{ entry.url | slug }}_{{ loop.index }}():
     response = requests.request(
         method={{ entry.method | python_repr }},
         url=BASE_URL + {{ entry.url | python_repr }},
+{% if entry.headers %}
+        headers={{ entry.headers | python_repr }},
+{% endif %}
+{% if entry.body is json_body %}
+        json={{ entry.body | python_repr }},
+{% elif entry.body is string_body %}
+        data={{ entry.body | python_repr }},
+{% endif %}
         timeout=10,
     )
     assert response.status_code == {{ entry.status }}
