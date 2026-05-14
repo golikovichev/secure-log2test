@@ -17,15 +17,31 @@ def _slugify(value):
     return value or "endpoint"
 
 
+def _python_repr(value):
+    """Render value as a safe Python string literal.
+
+    Generated tests are executed by the user via pytest. Without repr()
+    the template inlines log entry strings as raw Python source, so a
+    captured URL containing a quote or backslash can produce invalid or
+    arbitrary code. repr() escapes everything correctly and emits a
+    quoted literal the parser will accept.
+    """
+    return repr(value)
+
+
 class KibanaTestGenerator:
     def __init__(self, templates_dir):
         self.env = Environment(
             loader=FileSystemLoader(str(templates_dir)),
+            # autoescape disabled because we render Python source, not
+            # HTML. String safety comes from the python_repr filter
+            # applied to every log-derived value in the template.
             autoescape=select_autoescape([]),
             trim_blocks=True,
             lstrip_blocks=True,
         )
         self.env.filters["slug"] = _slugify
+        self.env.filters["python_repr"] = _python_repr
 
     def render(self, entries, base_url=""):
         template = self.env.get_template("test_module.py.j2")
