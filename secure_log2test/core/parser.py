@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -9,31 +10,79 @@ from pydantic import BaseModel, Field, field_validator
 logger = logging.getLogger(__name__)
 
 
-SENSITIVE_HEADERS = frozenset({
-    "authorization",
-    "proxy-authorization",
-    "cookie",
-    "set-cookie",
-    "x-api-key",
-    "x-auth-token",
-    "authentication",
-})
+SENSITIVE_HEADERS = frozenset(
+    {
+        "authorization",
+        "proxy-authorization",
+        "proxy-authenticate",
+        "cookie",
+        "set-cookie",
+        "x-api-key",
+        "x-auth-token",
+        "x-csrf-token",
+        "x-access-token",
+        "refresh-token",
+        "id-token",
+        "x-amz-security-token",
+        "authentication",
+    }
+)
+
+# Catches custom headers and body field names that imply credentials.
+# Matched case-insensitively against the full name as a substring.
+SENSITIVE_NAME_PATTERN = re.compile(
+    r"auth|token|secret|key|session|cookie|credential|bearer|password|passwd",
+    re.IGNORECASE,
+)
 
 REDACTED = "***REDACTED***"
+
+
+def _is_sensitive_name(name: str) -> bool:
+    lowered = name.lower()
+    if lowered in SENSITIVE_HEADERS:
+        return True
+    return bool(SENSITIVE_NAME_PATTERN.search(lowered))
 
 
 def redact_headers(headers):
     """Replace sensitive header values with a fixed redaction marker.
 
-    Header name match is case-insensitive. Returns a new dict; the input
-    is not mutated.
+    Header name match is case-insensitive. The static SENSITIVE_HEADERS
+    list catches the well-known names; SENSITIVE_NAME_PATTERN catches
+    custom names that contain auth / token / secret / key / etc. Returns
+    a new dict; the input is not mutated.
     """
     if not headers:
         return {}
     return {
-        name: (REDACTED if name.lower() in SENSITIVE_HEADERS else value)
+        name: (REDACTED if _is_sensitive_name(name) else value)
         for name, value in headers.items()
     }
+
+
+def redact_body(body):
+    """Recursively redact values whose key looks sensitive.
+
+    Walks dicts and lists. A dict value is replaced with REDACTED if its
+    key matches SENSITIVE_NAME_PATTERN; lists and nested dicts are
+    walked further. Other types (str, int, bool, None) are returned as-is.
+
+    Catches request payloads like {"password": "..."},
+    {"client_secret": "..."}, OAuth {"refresh_token": "..."}.
+    """
+    if isinstance(body, dict):
+        return {
+            k: (
+                REDACTED
+                if isinstance(k, str) and _is_sensitive_name(k)
+                else redact_body(v)
+            )
+            for k, v in body.items()
+        }
+    if isinstance(body, list):
+        return [redact_body(item) for item in body]
+    return body
 
 
 class KibanaLogEntry(BaseModel):
@@ -54,6 +103,11 @@ class KibanaLogEntry(BaseModel):
     def redact_sensitive_headers(cls, v):
         return redact_headers(v)
 
+    @field_validator("body")
+    @classmethod
+    def redact_sensitive_body(cls, v):
+        return redact_body(v)
+
 
 class KibanaLogParser:
     def __init__(self, path):
@@ -70,9 +124,7 @@ class KibanaLogParser:
                 f"Original error: {e}"
             ) from e
         except json.JSONDecodeError as e:
-            raise ValueError(
-                f"{self.path} is not valid JSON: {e}"
-            ) from e
+            raise ValueError(f"{self.path} is not valid JSON: {e}") from e
 
         if not isinstance(data, dict) or "hits" not in data:
             hint = ""

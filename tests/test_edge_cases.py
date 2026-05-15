@@ -8,6 +8,7 @@ from secure_log2test.core.parser import (
     KibanaLogEntry,
     KibanaLogParser,
     REDACTED,
+    redact_body,
     redact_headers,
 )
 
@@ -15,6 +16,7 @@ from secure_log2test.core.parser import (
 # ---------------------------------------------------------------------------
 # Header redaction
 # ---------------------------------------------------------------------------
+
 
 def test_authorization_header_redacted():
     cleaned = redact_headers({"Authorization": "Bearer secret-token-xyz"})
@@ -27,11 +29,13 @@ def test_cookie_header_redacted():
 
 
 def test_redaction_is_case_insensitive():
-    cleaned = redact_headers({
-        "AUTHORIZATION": "Bearer x",
-        "x-api-key": "k1",
-        "X-Auth-Token": "t1",
-    })
+    cleaned = redact_headers(
+        {
+            "AUTHORIZATION": "Bearer x",
+            "x-api-key": "k1",
+            "X-Auth-Token": "t1",
+        }
+    )
     assert cleaned["AUTHORIZATION"] == REDACTED
     assert cleaned["x-api-key"] == REDACTED
     assert cleaned["X-Auth-Token"] == REDACTED
@@ -73,12 +77,14 @@ def test_entry_redaction_on_parser_output(tmp_path):
     payload = {
         "hits": {
             "hits": [
-                {"_source": {
-                    "method": "POST",
-                    "url": "/api/v1/login",
-                    "status": 200,
-                    "headers": {"Authorization": "Bearer leaked"},
-                }},
+                {
+                    "_source": {
+                        "method": "POST",
+                        "url": "/api/v1/login",
+                        "status": 200,
+                        "headers": {"Authorization": "Bearer leaked"},
+                    }
+                },
             ]
         }
     }
@@ -92,6 +98,7 @@ def test_entry_redaction_on_parser_output(tmp_path):
 # ---------------------------------------------------------------------------
 # Empty / missing body
 # ---------------------------------------------------------------------------
+
 
 def test_body_defaults_to_none():
     entry = KibanaLogEntry(method="GET", url="/", status=200)
@@ -114,7 +121,14 @@ def test_parser_handles_entries_without_body(tmp_path):
             "hits": [
                 {"_source": {"method": "GET", "url": "/a", "status": 200}},
                 {"_source": {"method": "GET", "url": "/b", "status": 200, "body": ""}},
-                {"_source": {"method": "GET", "url": "/c", "status": 200, "body": None}},
+                {
+                    "_source": {
+                        "method": "GET",
+                        "url": "/c",
+                        "status": 200,
+                        "body": None,
+                    }
+                },
             ]
         }
     }
@@ -128,6 +142,7 @@ def test_parser_handles_entries_without_body(tmp_path):
 # ---------------------------------------------------------------------------
 # Server-error status codes (5xx)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize("code", [500, 502, 503, 504, 599])
 def test_5xx_codes_accepted(code):
@@ -150,3 +165,74 @@ def test_parser_preserves_5xx_codes(tmp_path):
     entries = KibanaLogParser(src).parse()
     statuses = sorted(e.status for e in entries)
     assert statuses == [500, 503, 504]
+
+
+# ---------------------------------------------------------------------------
+# Hardened header redaction (regex pattern fallback)
+# ---------------------------------------------------------------------------
+
+
+def test_custom_token_header_caught_by_pattern():
+    cleaned = redact_headers({"X-Custom-Token": "secret"})
+    assert cleaned["X-Custom-Token"] == REDACTED
+
+
+def test_csrf_token_redacted():
+    cleaned = redact_headers({"X-CSRF-Token": "abc"})
+    assert cleaned["X-CSRF-Token"] == REDACTED
+
+
+def test_refresh_token_header_redacted():
+    cleaned = redact_headers({"Refresh-Token": "rt-1"})
+    assert cleaned["Refresh-Token"] == REDACTED
+
+
+# ---------------------------------------------------------------------------
+# Body redaction walker
+# ---------------------------------------------------------------------------
+
+
+def test_redact_body_password_field():
+    assert redact_body({"username": "u", "password": "p"}) == {
+        "username": "u",
+        "password": REDACTED,
+    }
+
+
+def test_redact_body_oauth_refresh_token():
+    assert redact_body({"refresh_token": "rt", "expires_in": 3600}) == {
+        "refresh_token": REDACTED,
+        "expires_in": 3600,
+    }
+
+
+def test_redact_body_nested_dict():
+    cleaned = redact_body({"auth": {"bearer": "x"}, "data": {"value": 1}})
+    assert cleaned["auth"] == REDACTED  # whole subtree redacted at the "auth" key
+    assert cleaned["data"] == {"value": 1}
+
+
+def test_redact_body_list_of_dicts():
+    payload = [
+        {"name": "Alice", "api_key": "k1"},
+        {"name": "Bob", "secret": "s2"},
+    ]
+    cleaned = redact_body(payload)
+    assert cleaned[0] == {"name": "Alice", "api_key": REDACTED}
+    assert cleaned[1] == {"name": "Bob", "secret": REDACTED}
+
+
+def test_redact_body_non_dict_passthrough():
+    assert redact_body("plain string") == "plain string"
+    assert redact_body(42) == 42
+    assert redact_body(None) is None
+
+
+def test_log_entry_body_validator_redacts():
+    entry = KibanaLogEntry(
+        method="POST",
+        url="/login",
+        status=200,
+        body={"username": "u", "password": "p"},
+    )
+    assert entry.body == {"username": "u", "password": REDACTED}
