@@ -4,6 +4,21 @@ All notable changes to this project will be documented here. Format is loosely b
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-15
+
+### Added
+- Generated tests now emit `headers={...}` and `json={...}` (or `data=...` for non-JSON bodies) blocks reflecting the original log entry, so the redaction work done at parse time is visible in the output file. Previously the template emitted only `method`, `url`, and `status`, hiding the redacted values from the reader.
+- Recursive body redaction walker (`redact_body`) wired into `KibanaLogEntry` as a Pydantic field validator. Scrubs values whose dict key matches the sensitive-name pattern at any depth: `{"password": ...}`, `{"client_secret": ...}`, OAuth `{"refresh_token": ...}`, nested dicts, lists of dicts.
+- Substring pattern fallback (`auth|token|secret|key|session|cookie|credential|bearer|password|passwd`) for header and body field names that fall outside the static `SENSITIVE_HEADERS` list. Catches custom names project teams invent (`X-Custom-Token`, `Refresh-Token`, etc.).
+- Six new entries in the static `SENSITIVE_HEADERS` list: `proxy-authenticate`, `x-csrf-token`, `x-access-token`, `refresh-token`, `id-token`, `x-amz-security-token`.
+- New Jinja2 filter `python_repr` and tests `json_body` / `string_body` for safer rendering of header values and request bodies in generated tests.
+- 10 new unit tests covering custom-token header pattern matching, body walker on nested dicts and lists, OAuth refresh-token scrubbing, and the integrated validator path. Test suite is now 59 tests, up from 33.
+- Python 3.13 added to CI matrix and pyproject classifiers.
+
+### Changed
+- Generator now renders log field values via `repr()` so any quote, backslash, or curly brace inside an original header or body literal cannot break the generated Python source.
+- README expanded with current redaction coverage (13 static headers + regex pattern + recursive body walker), live issue cross-links for Limitations and Roadmap, and a link to the Dev.to design write-up.
+
 ## [1.0.1] - 2026-05-12
 
 ### Fixed

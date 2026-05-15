@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "secure-log2test"
-version = "1.0.1"
-description = "Convert Kibana API log exports into runnable pytest suites with auth header redaction."
+version = "1.1.0"
+description = "Convert Kibana API log exports into runnable pytest suites with auth header and request body redaction."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
