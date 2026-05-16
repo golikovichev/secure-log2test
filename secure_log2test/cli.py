@@ -38,6 +38,12 @@ def main(argv: list[str] | None = None) -> int:
         default=Path(__file__).parent / "templates",
         help="Templates directory (default: bundled package templates)",
     )
+    parser.add_argument(
+        "--format",
+        choices=["pytest", "json", "csv"],
+        default="pytest",
+        help="Output format (default: pytest)",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -57,7 +63,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     generator = KibanaTestGenerator(args.templates)
-    generator.write(entries, args.output, base_url=args.base_url)
+    generator.write(
+        entries, args.output, base_url=args.base_url, output_format=args.format
+    )
     print(f"Generated {len(entries)} tests -> {args.output}")
     return 0
 

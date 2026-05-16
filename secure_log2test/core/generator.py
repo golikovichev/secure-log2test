@@ -1,3 +1,5 @@
+import csv
+import json
 import logging
 import re
 from pathlib import Path
@@ -70,10 +72,38 @@ class KibanaTestGenerator:
             redacted_marker=REDACTED,
         )
 
-    def write(self, entries, output_path, base_url=""):
+    def write(self, entries, output_path, base_url="", output_format="pytest"):
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        rendered = self.render(entries, base_url=base_url)
-        output_path.write_text(rendered, encoding="utf-8")
+
+        if output_format == "pytest":
+            rendered = self.render(entries, base_url=base_url)
+            output_path.write_text(rendered, encoding="utf-8")
+        elif output_format == "json":
+            self.write_json(entries, output_path)
+        elif output_format == "csv":
+            self.write_csv(entries, output_path)
+        else:
+            raise ValueError(f"Unsupported output format: {output_format}")
+
         logger.info("Wrote %d entries to %s", len(entries), output_path)
         return output_path
+
+    def write_json(self, entries, output_path):
+        data = [
+            e.model_dump() if isinstance(e, KibanaLogEntry) else e for e in entries
+        ]
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    def write_csv(self, entries, output_path):
+        fieldnames = ["method", "url", "status", "duration", "headers", "body"]
+        with open(output_path, "w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            for e in entries:
+                row = e.model_dump() if isinstance(e, KibanaLogEntry) else e
+                # Serialize dicts/lists to JSON strings for CSV compatibility
+                row["headers"] = json.dumps(row.get("headers", {}))
+                row["body"] = json.dumps(row.get("body"))
+                writer.writerow(row)
