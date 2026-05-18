@@ -94,7 +94,7 @@ class KibanaTestGenerator:
             e.model_dump() if isinstance(e, KibanaLogEntry) else e for e in entries
         ]
         with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2, ensure_ascii=False)
 
     def write_csv(self, entries, output_path):
         fieldnames = ["method", "url", "status", "duration", "headers", "body"]
@@ -104,6 +104,6 @@ class KibanaTestGenerator:
             for e in entries:
                 row = e.model_dump() if isinstance(e, KibanaLogEntry) else e
                 # Serialize dicts/lists to JSON strings for CSV compatibility
-                row["headers"] = json.dumps(row.get("headers", {}))
-                row["body"] = json.dumps(row.get("body"))
+                row["headers"] = json.dumps(row.get("headers", {}), ensure_ascii=False)
+                row["body"] = json.dumps(row.get("body"), ensure_ascii=False)
                 writer.writerow(row)
