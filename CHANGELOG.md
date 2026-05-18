@@ -4,6 +4,10 @@ All notable changes to this project will be documented here. Format is loosely b
 
 ## [Unreleased]
 
+### Added
+- CLI forces stdout and stderr to UTF-8 on startup via a new `ensure_utf8_streams()` call at the top of `main()`. Without it, Windows shells defaulting to cp1252 raise `UnicodeEncodeError` when a generated test name or parser warning carries non-ASCII bytes (Cyrillic, accented Latin, CJK, emoji). This is the write-side mirror of the v1.0.1 read-side fix for issue #3.
+- 10 new tests in `tests/test_stdout_encoding.py` covering: actual cp1252 to UTF-8 switch with Cyrillic round-trip, `io.StringIO` no-op path, non-callable `reconfigure` attribute, raising `reconfigure` (closed streams or odd wrappers), `monkeypatch`-replaced stdio, and a parametrize sweep across ASCII / Cyrillic / accented Latin / CJK / emoji. Test suite is now 83 tests.
+
 ## [1.1.0] - 2026-05-15
 
 ### Added

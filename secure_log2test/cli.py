@@ -1,12 +1,20 @@
 """CLI entry for secure-log2test.
 
-Wired through `console_scripts` entry в pyproject.toml so installs expose
+Wired through `console_scripts` entry in pyproject.toml so installs expose
 a `secure-log2test` command. Also runnable via `python -m secure_log2test`.
+
+The CLI forces stdout and stderr to UTF-8 before any write. Without this,
+Windows shells default to cp1252 and the moment a generated test name or
+parser warning includes a non-ASCII byte (Cyrillic header values, accented
+endpoint slugs, emoji in log payloads) Python raises UnicodeEncodeError and
+the run dies before producing the output file. This is the same family of
+bug that v1.0.1 patched on the read side; the write side now matches.
 """
 
 from __future__ import annotations
 
 import argparse
+import io
 import logging
 import sys
 from pathlib import Path
@@ -19,7 +27,38 @@ DEFAULT_MAX_INPUT_MB = 100
 SKIP_RATIO_LIMIT = 0.5
 
 
+def _ensure_utf8_stream(stream):
+    """Reconfigure a text stream to UTF-8 if the platform allows it.
+
+    Returns True when the stream now writes UTF-8, False when the call was
+    a no-op (stream lacks `reconfigure`, e.g. it was replaced with a plain
+    `io.StringIO` in tests, the attribute exists but is not callable, or
+    the reconfigure raised). The boolean is primarily for unit-test
+    assertions; callers can ignore it.
+    """
+    reconfigure = getattr(stream, "reconfigure", None)
+    if not callable(reconfigure):
+        return False
+    try:
+        reconfigure(encoding="utf-8", errors="backslashreplace")
+    except (OSError, ValueError, TypeError, io.UnsupportedOperation):
+        return False
+    return True
+
+
+def ensure_utf8_streams():
+    """Apply UTF-8 to both stdout and stderr; safe to call more than once.
+
+    Called from `main()` rather than at module import on purpose. Mutating
+    `sys.stdout` at import would surprise embedders and pytest plugins that
+    capture stdio before our code runs.
+    """
+    _ensure_utf8_stream(sys.stdout)
+    _ensure_utf8_stream(sys.stderr)
+
+
 def main(argv: list[str] | None = None) -> int:
+    ensure_utf8_streams()
     parser = argparse.ArgumentParser(
         prog="secure-log2test",
         description="Convert Kibana API log export to executable pytest suite",
