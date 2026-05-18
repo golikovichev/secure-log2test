@@ -112,6 +112,8 @@ class KibanaLogEntry(BaseModel):
 class KibanaLogParser:
     def __init__(self, path):
         self.path = Path(path)
+        self.attempted = 0
+        self.skipped = 0
 
     def parse(self):
         try:
@@ -145,11 +147,16 @@ class KibanaLogParser:
                 f"hits.hits[], got {type(data).__name__}.{hint}"
             )
 
+        hits = data.get("hits", {}).get("hits", [])
+        self.attempted = len(hits)
+        self.skipped = 0
+
         entries = []
-        for hit in data.get("hits", {}).get("hits", []):
+        for hit in hits:
             try:
                 entries.append(KibanaLogEntry(**hit["_source"]))
             except Exception as e:
+                self.skipped += 1
                 logger.warning(f"Skipping bad entry: {e}")
 
         return entries
