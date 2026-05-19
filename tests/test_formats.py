@@ -15,7 +15,7 @@ def test_write_json(tmp_path):
         )
     ]
     output = tmp_path / "output.json"
-    generator = KibanaTestGenerator(tmp_path) # templates dir not needed for json
+    generator = KibanaTestGenerator(tmp_path)
     generator.write(entries, output, output_format="json")
     
     with open(output, encoding="utf-8") as f:
@@ -98,4 +98,13 @@ def test_cyrillic_output_formats(tmp_path):
     assert headers["X-User-Language"] == "русский"
     body = json.loads(rows[0]["body"])
     assert body["имя"] == "Михаил"
+
+
+def test_bogus_format_raises_error(tmp_path):
+    import pytest
+    entries = []
+    output = tmp_path / "output.bogus"
+    generator = KibanaTestGenerator(tmp_path)
+    with pytest.raises(ValueError, match="Unsupported output format: bogus"):
+        generator.write(entries, output, output_format="bogus")
 

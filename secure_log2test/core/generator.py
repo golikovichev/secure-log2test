@@ -90,6 +90,7 @@ class KibanaTestGenerator:
         return output_path
 
     def write_json(self, entries, output_path):
+        """Write entries to JSON output. Note: templates arg is unused for non-pytest formats."""
         data = [
             e.model_dump() if isinstance(e, KibanaLogEntry) else e for e in entries
         ]
@@ -97,7 +98,8 @@ class KibanaTestGenerator:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
     def write_csv(self, entries, output_path):
-        fieldnames = ["method", "url", "status", "duration", "headers", "body"]
+        """Write entries to CSV output. Note: templates arg is unused for non-pytest formats."""
+        fieldnames = list(KibanaLogEntry.model_fields.keys())
         with open(output_path, "w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
