@@ -40,8 +40,8 @@ jobs:
 
       - name: Smoke-test installed CLI on sample data
         run: |
-          secure-log2test data/sample_kibana_export.json --output /tmp/generated.py
-          python -c "import ast; ast.parse(open('/tmp/generated.py').read())"
+          secure-log2test data/sample_kibana_export.json --output smoke_generated.py
+          python -c "import ast; ast.parse(open('smoke_generated.py').read())"
 
       - name: Build wheel + sdist
         run: |
