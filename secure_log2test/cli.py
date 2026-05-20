@@ -82,6 +82,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Templates directory (default: bundled package templates)",
     )
     parser.add_argument(
+        "--format",
+        choices=["pytest", "json", "csv"],
+        default="pytest",
+        help="Output format (default: pytest)",
+    )
+    parser.add_argument(
         "--max-input-mb",
         type=int,
         default=DEFAULT_MAX_INPUT_MB,
@@ -122,7 +128,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     generator = KibanaTestGenerator(args.templates)
-    generator.write(entries, args.output, base_url=args.base_url)
+    generator.write(
+        entries, args.output, base_url=args.base_url, output_format=args.format
+    )
 
     attempted = log_parser.attempted
     skipped = log_parser.skipped
@@ -141,7 +149,6 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-
     return 0
 
 

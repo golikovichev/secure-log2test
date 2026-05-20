@@ -51,7 +51,17 @@ Two stages, kept separate.
 
 The same logic walks request bodies recursively, so `{"password": "..."}`, `{"client_secret": "..."}`, OAuth `{"refresh_token": "..."}` all get scrubbed at parse time. Header name matching is case-insensitive. Values get replaced with `***REDACTED***`. The original input dict is not mutated.
 
-**Generate** (`core/generator.py`). Takes the cleaned entries and renders a Jinja2 template (`templates/test_module.py.j2`) into a pytest module. Each log entry becomes one `test_*` function. The slug filter turns `/api/v1/users/42` into a stable function name. A `--base-url` flag lets you target staging vs production at runtime.
+**Generate** (`core/generator.py`). Takes the cleaned entries and renders a Jinja2 template (`templates/test_module.py.j2`) into a pytest module. Each log entry becomes one `test_*` function. The slug filter turns `/api/v1/users/42` into a stable function name.
+
+### Options
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--input` | ✅ | Path to Kibana JSON export (positional) |
+| `--output` | ✅ | Output path for generated file |
+| `--format` | ❌ | Output format: `pytest` (default), `json`, or `csv` |
+| `--base-url`| ❌ | Base URL prefix for generated requests (`pytest` only) |
+| `--templates`| ❌ | Custom templates directory (`pytest` only) |
 
 The split lets you reuse the parser for other formats. If you want to generate Locust scripts, k6 scenarios, or an OpenAPI spec from the same logs, the parser stays. Only the template changes.
 
@@ -91,7 +101,7 @@ What v1.0.1 does **not** handle yet. Calling them out so the tool stays trustwor
 
 - Kibana / Elasticsearch JSON export shape only. Grafana Loki Explore exports are tracked in [#4](https://github.com/golikovichev/secure-log2test/issues/4).
 - Single-file input. Multi-file batch mode is on the roadmap.
-- Output format: pytest only. JSON / CSV for downstream pipelines is tracked in [#5](https://github.com/golikovichev/secure-log2test/issues/5).
+- Output format: pytest, JSON, or CSV.
 - Custom redaction marker string. The default `***REDACTED***` is hardcoded; configurable marker is tracked in [#6](https://github.com/golikovichev/secure-log2test/issues/6).
 - Response body assertions. Status code only for now, full body match is on the v1.1 list ([#1](https://github.com/golikovichev/secure-log2test/issues/1)).
 - Custom redaction rules via config file are on the v1.2 list ([#2](https://github.com/golikovichev/secure-log2test/issues/2)).
