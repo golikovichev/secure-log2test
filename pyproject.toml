@@ -76,3 +76,17 @@ include = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.coverage.run]
+source = ["secure_log2test"]
+omit = [
+    "tests/*",
+    "tests_generated.py",
+    "*/tests_generated.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
