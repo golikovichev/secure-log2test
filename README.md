@@ -131,6 +131,23 @@ The redaction layer catches the well-known auth headers plus anything whose name
 
 Never commit a generated suite that includes real production tokens. The redaction layer is a safety net, not a substitute for review.
 
+## Related projects and patterns
+
+Once `secure-log2test` has produced your replay suite, the next layer of
+work is usually fixture organisation, shared auth, and the parametrize
+patterns that scale across hundreds of generated cases. The
+[tessl-labs/pytest-api-testing](https://tessl.io/registry/tessl-labs/pytest-api-testing)
+skill on the Tessl Registry collects those follow-on conventions:
+httpx `AsyncClient` setup, `conftest.py` fixture shape, database
+isolation, parametrize for edge cases, and auth-flow handling. Useful
+reference when the generated suite starts growing its own test
+infrastructure.
+
+Sister projects in the same workspace:
+
+- [postman2pytest](https://github.com/golikovichev/postman2pytest): same idea but the input is Postman Collection JSON instead of Kibana log exports.
+- [pytest-conversational](https://github.com/golikovichev/pytest-conversational): pytest plugin for multi-turn dialogue testing.
+
 ## Contributing
 
 Issue templates and PR guidance live in [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports with a redacted sample log are the most useful kind.
