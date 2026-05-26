@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-import pytest
 
 from secure_log2test.core.parser import KibanaLogEntry, KibanaLogParser
 

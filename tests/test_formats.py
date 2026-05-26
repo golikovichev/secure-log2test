@@ -1,6 +1,5 @@
 import json
 import csv
-from pathlib import Path
 from secure_log2test.core.parser import KibanaLogEntry
 from secure_log2test.core.generator import KibanaTestGenerator
 

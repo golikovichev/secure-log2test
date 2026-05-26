@@ -7,10 +7,8 @@ interpret as code.
 """
 
 import ast
-import os
 import pathlib
 
-import pytest
 
 from secure_log2test.core.generator import KibanaTestGenerator
 from secure_log2test.core.parser import KibanaLogEntry
