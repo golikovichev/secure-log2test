@@ -30,14 +30,18 @@ def test_status_codes_preserved():
 
 def test_skips_malformed_entry(tmp_path):
     bad = tmp_path / "bad.json"
-    bad.write_text(json.dumps({
-        "hits": {
-            "hits": [
-                {"_source": {"method": "GET", "url": "/ok", "status": 200}},
-                {"_source": {"url": "/missing-method", "status": 200}},
-            ]
-        }
-    }))
+    bad.write_text(
+        json.dumps(
+            {
+                "hits": {
+                    "hits": [
+                        {"_source": {"method": "GET", "url": "/ok", "status": 200}},
+                        {"_source": {"url": "/missing-method", "status": 200}},
+                    ]
+                }
+            }
+        )
+    )
     parser = KibanaLogParser(bad)
     entries = parser.parse()
     assert len(entries) == 1

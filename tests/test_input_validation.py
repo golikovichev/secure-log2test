@@ -147,9 +147,7 @@ def test_utf8_bom_is_handled(tmp_path):
     payload = {
         "hits": {
             "total": {"value": 1, "relation": "eq"},
-            "hits": [
-                {"_source": {"method": "GET", "url": "/api", "status": 200}}
-            ],
+            "hits": [{"_source": {"method": "GET", "url": "/api", "status": 200}}],
         }
     }
     path.write_text(json.dumps(payload), encoding="utf-8-sig")

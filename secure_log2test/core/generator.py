@@ -91,9 +91,7 @@ class KibanaTestGenerator:
 
     def write_json(self, entries, output_path):
         """Write entries to JSON output. Note: templates arg is unused for non-pytest formats."""
-        data = [
-            e.model_dump() if isinstance(e, KibanaLogEntry) else e for e in entries
-        ]
+        data = [e.model_dump() if isinstance(e, KibanaLogEntry) else e for e in entries]
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 

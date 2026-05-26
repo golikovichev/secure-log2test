@@ -3,6 +3,7 @@ import csv
 from secure_log2test.core.parser import KibanaLogEntry
 from secure_log2test.core.generator import KibanaTestGenerator
 
+
 def test_write_json(tmp_path):
     entries = [
         KibanaLogEntry(
@@ -10,20 +11,21 @@ def test_write_json(tmp_path):
             url="/api/login",
             status=200,
             headers={"Authorization": "Bearer secret"},
-            body={"password": "123"}
+            body={"password": "123"},
         )
     ]
     output = tmp_path / "output.json"
     generator = KibanaTestGenerator(tmp_path)
     generator.write(entries, output, output_format="json")
-    
+
     with open(output, encoding="utf-8") as f:
         data = json.load(f)
-    
+
     assert len(data) == 1
     assert data[0]["method"] == "POST"
     assert data[0]["headers"]["Authorization"] == "***REDACTED***"
     assert data[0]["body"]["password"] == "***REDACTED***"
+
 
 def test_write_csv(tmp_path):
     entries = [
@@ -32,17 +34,17 @@ def test_write_csv(tmp_path):
             url="/api/users",
             status=200,
             headers={"X-Auth": "key"},
-            body=None
+            body=None,
         )
     ]
     output = tmp_path / "output.csv"
     generator = KibanaTestGenerator(tmp_path)
     generator.write(entries, output, output_format="csv")
-    
+
     with open(output, encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
-    
+
     assert len(rows) == 1
     assert rows[0]["method"] == "GET"
     assert rows[0]["url"] == "/api/users"
@@ -101,9 +103,9 @@ def test_cyrillic_output_formats(tmp_path):
 
 def test_bogus_format_raises_error(tmp_path):
     import pytest
+
     entries = []
     output = tmp_path / "output.bogus"
     generator = KibanaTestGenerator(tmp_path)
     with pytest.raises(ValueError, match="Unsupported output format: bogus"):
         generator.write(entries, output, output_format="bogus")
-

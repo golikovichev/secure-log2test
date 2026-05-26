@@ -30,7 +30,7 @@ Open an issue first so we can talk through the use case before you write code. K
 ## Code style
 
 - Plain Python, no extra dependencies unless there's a real reason.
-- Function and variable names in English, lowercase with underscores.
+- Function and variable names in English, lowercase with snake_case (e.g., `parse_log_line`).
 - One responsibility per function. If a function grows past 30-40 lines, split it.
 
 ## Security

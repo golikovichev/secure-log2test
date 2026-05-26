@@ -14,11 +14,7 @@ from secure_log2test.core.generator import KibanaTestGenerator
 from secure_log2test.core.parser import KibanaLogEntry
 
 
-TEMPLATES_DIR = (
-    pathlib.Path(__file__).parent.parent
-    / "secure_log2test"
-    / "templates"
-)
+TEMPLATES_DIR = pathlib.Path(__file__).parent.parent / "secure_log2test" / "templates"
 
 
 def _render(entries, base_url=""):
@@ -41,8 +37,7 @@ def test_url_with_double_quote_is_escaped():
             fn = node.func
             target = (
                 f"{fn.value.id}.{fn.attr}"
-                if isinstance(fn, ast.Attribute)
-                and isinstance(fn.value, ast.Name)
+                if isinstance(fn, ast.Attribute) and isinstance(fn.value, ast.Name)
                 else None
             )
             assert target != "os.system", "URL injection reached AST"
@@ -255,8 +250,7 @@ def test_body_with_injection_payload_lands_as_literal():
             fn = node.func
             target = (
                 f"{fn.value.id}.{fn.attr}"
-                if isinstance(fn, ast.Attribute)
-                and isinstance(fn.value, ast.Name)
+                if isinstance(fn, ast.Attribute) and isinstance(fn.value, ast.Name)
                 else None
             )
             assert target != "os.system", (
