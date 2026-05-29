@@ -36,7 +36,7 @@ This regex walks request bodies recursively, so nested fields like `{"password":
 
 **Replacement marker:** literal string `***REDACTED***`. The original input dict is not mutated; the generator copies before redacting.
 
-**Adding custom rules:** if your team uses an opaque internal name the pattern misses (e.g. `X-MyCo-Token`), add it to `SENSITIVE_HEADERS` in `core/parser.py` before generating output. Rule-file support is tracked в issue #2 for v1.2.
+**Adding custom rules:** if your team uses an opaque internal name the pattern misses (e.g. `X-MyCo-Token`), add it to `SENSITIVE_HEADERS` in `core/parser.py` before generating output. Rule-file support is tracked in issue #2 for v1.2.
 
 ## Validation after generation
 
