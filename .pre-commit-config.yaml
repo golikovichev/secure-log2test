@@ -28,9 +28,9 @@ repos:
 
   - repo: local
     hooks:
-      - id: anti-ai-markers
-        name: Anti-AI markers (em-dash, curly quotes, buzzwords)
-        entry: python scripts/check_anti_ai_markers.py
+      - id: text-style
+        name: Text style (em-dash, curly quotes, buzzwords, mixed script)
+        entry: python scripts/check_text_style.py
         language: system
         types: [text]
         exclude: ^(generated_tests/|docs/)
@@ -41,3 +41,10 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
+
+      - id: commit-message-style
+        name: Commit message style (ASCII, no boilerplate)
+        entry: python scripts/check_commit_message.py
+        language: system
+        stages: [commit-msg]
+        pass_filenames: true
