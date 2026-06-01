@@ -1,0 +1,3 @@
+# Normalize line endings across platforms to prevent CRLF/LF drift
+# (born 01.06.2026 after this repo showed Windows editor CRLF drift)
+* text=auto eol=lf
