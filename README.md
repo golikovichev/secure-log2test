@@ -51,7 +51,7 @@ Two stages, kept separate.
 
 **Parse** (`core/parser.py`). Reads the Kibana JSON and validates each entry through Pydantic v2. Two layers of redaction run before any further processing:
 
-- A static list of well-known headers (`authorization`, `proxy-authorization`, `proxy-authenticate`, `cookie`, `set-cookie`, `x-api-key`, `x-auth-token`, `x-csrf-token`, `x-access-token`, `refresh-token`, `id-token`, `x-amz-security-token`, `authentication`).
+- A static list of well-known headers (`authorization`, `proxy-authorization`, `proxy-authenticate`, `cookie`, `set-cookie`, `x-api-key`, `x-auth-token`, `x-csrf-token`, `x-access-token`, `refresh-token`, `id-token`, `x-amz-security-token`, `authentication`, `dpop`, `x-hub-signature`, `x-hub-signature-256`). The last three carry credential material (a DPoP proof JWT, webhook HMAC signatures) whose names the regex below would otherwise miss.
 - A regex pattern (`auth|token|secret|key|session|cookie|credential|bearer|password|passwd`) that catches custom header names and body field names project teams invent.
 
 The same logic walks request bodies recursively, so `{"password": "..."}`, `{"client_secret": "..."}`, OAuth `{"refresh_token": "..."}` all get scrubbed at parse time. Header name matching is case-insensitive. Values get replaced with `***REDACTED***`. The original input dict is not mutated.
@@ -132,7 +132,7 @@ Open the [issue tracker](https://github.com/golikovichev/secure-log2test/issues)
 pytest tests/ -v
 ```
 
-59 tests as of v1.0.1, covering:
+86 tests, covering:
 
 - Parser unit tests for valid input, malformed input, header redaction, body redaction walker, empty bodies.
 - Edge cases for 5xx responses, missing fields, custom auth header patterns, OAuth refresh tokens in request bodies.

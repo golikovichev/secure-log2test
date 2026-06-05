@@ -25,6 +25,9 @@ SENSITIVE_HEADERS = frozenset(
         "id-token",
         "x-amz-security-token",
         "authentication",
+        "dpop",
+        "x-hub-signature",
+        "x-hub-signature-256",
     }
 )
 

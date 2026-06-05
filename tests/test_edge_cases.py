@@ -41,6 +41,22 @@ def test_redaction_is_case_insensitive():
     assert cleaned["X-Auth-Token"] == REDACTED
 
 
+def test_dpop_and_webhook_signature_headers_redacted():
+    # DPoP (RFC 9449) carries a signed proof JWT; webhook signature headers
+    # carry an HMAC derived from a shared secret. Neither name contains the
+    # substrings the regex looks for, so they need explicit coverage.
+    cleaned = redact_headers(
+        {
+            "DPoP": "eyJhbGciOiJFUzI1Ni.eyJodHUiOiJodHRwczovL2FwaSJ9.signaturepart",
+            "X-Hub-Signature-256": "sha256=8f3a9c0deadbeef",
+            "X-Hub-Signature": "sha1=0123456789abcdef",
+        }
+    )
+    assert cleaned["DPoP"] == REDACTED
+    assert cleaned["X-Hub-Signature-256"] == REDACTED
+    assert cleaned["X-Hub-Signature"] == REDACTED
+
+
 def test_safe_headers_preserved():
     headers = {
         "Content-Type": "application/json",
