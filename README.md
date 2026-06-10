@@ -12,7 +12,9 @@
 
 Turn a Kibana API log export into an executable pytest suite. Auth headers and secret-looking body fields redacted before they reach the output.
 
-Status: v1.0.1 on PyPI. Stable per semver. Active roadmap, see open issues.
+![secure-log2test demo](assets/demo.gif)
+
+Status: v1.1.0 on PyPI. Stable per semver. Active roadmap, see open issues.
 
 📖 **[Read the design write-up on Dev.to](https://dev.to/golikovichev/your-kibana-logs-are-full-of-test-cases-here-is-a-cli-that-extracts-them-with-auth-scrubbed-by-4433)**: privacy constraint, three-layer redaction, the v1.0.0 to v1.0.1 user-feedback story.
 
