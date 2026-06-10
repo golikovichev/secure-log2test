@@ -48,44 +48,56 @@ def _is_sensitive_name(name: str) -> bool:
     return bool(SENSITIVE_NAME_PATTERN.search(lowered))
 
 
-def redact_headers(headers):
-    """Replace sensitive header values with a fixed redaction marker.
+def redact_headers(headers, marker=REDACTED):
+    """Replace sensitive header values with a redaction marker.
 
     Header name match is case-insensitive. The static SENSITIVE_HEADERS
     list catches the well-known names; SENSITIVE_NAME_PATTERN catches
     custom names that contain auth / token / secret / key / etc. Returns
-    a new dict; the input is not mutated.
+    a new dict; the input is not mutated. ``marker`` overrides the default
+    ``***REDACTED***`` replacement string.
     """
     if not headers:
         return {}
     return {
-        name: (REDACTED if _is_sensitive_name(name) else value)
+        name: (marker if _is_sensitive_name(name) else value)
         for name, value in headers.items()
     }
 
 
-def redact_body(body):
+def redact_body(body, marker=REDACTED):
     """Recursively redact values whose key looks sensitive.
 
-    Walks dicts and lists. A dict value is replaced with REDACTED if its
+    Walks dicts and lists. A dict value is replaced with ``marker`` if its
     key matches SENSITIVE_NAME_PATTERN; lists and nested dicts are
     walked further. Other types (str, int, bool, None) are returned as-is.
 
     Catches request payloads like {"password": "..."},
     {"client_secret": "..."}, OAuth {"refresh_token": "..."}.
+    ``marker`` overrides the default ``***REDACTED***`` replacement string.
     """
     if isinstance(body, dict):
         return {
             k: (
-                REDACTED
+                marker
                 if isinstance(k, str) and _is_sensitive_name(k)
-                else redact_body(v)
+                else redact_body(v, marker)
             )
             for k, v in body.items()
         }
     if isinstance(body, list):
-        return [redact_body(item) for item in body]
+        return [redact_body(item, marker) for item in body]
     return body
+
+
+def _marker_from_context(info) -> str:
+    """Read the active redaction marker from Pydantic validation context.
+
+    Falls back to the default ``REDACTED`` when no context is supplied, so
+    direct ``KibanaLogEntry(...)`` construction keeps the original behaviour.
+    """
+    context = getattr(info, "context", None) or {}
+    return context.get("redact_marker", REDACTED)
 
 
 class KibanaLogEntry(BaseModel):
@@ -103,18 +115,19 @@ class KibanaLogEntry(BaseModel):
 
     @field_validator("headers")
     @classmethod
-    def redact_sensitive_headers(cls, v):
-        return redact_headers(v)
+    def redact_sensitive_headers(cls, v, info):
+        return redact_headers(v, _marker_from_context(info))
 
     @field_validator("body")
     @classmethod
-    def redact_sensitive_body(cls, v):
-        return redact_body(v)
+    def redact_sensitive_body(cls, v, info):
+        return redact_body(v, _marker_from_context(info))
 
 
 class KibanaLogParser:
-    def __init__(self, path):
+    def __init__(self, path, redact_marker=REDACTED):
         self.path = Path(path)
+        self.redact_marker = redact_marker
         self.attempted = 0
         self.skipped = 0
 
@@ -157,7 +170,12 @@ class KibanaLogParser:
         entries = []
         for hit in hits:
             try:
-                entries.append(KibanaLogEntry(**hit["_source"]))
+                entries.append(
+                    KibanaLogEntry.model_validate(
+                        hit["_source"],
+                        context={"redact_marker": self.redact_marker},
+                    )
+                )
             except Exception as e:
                 self.skipped += 1
                 logger.warning(f"Skipping bad entry: {e}")

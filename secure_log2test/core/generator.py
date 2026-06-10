@@ -58,7 +58,7 @@ class KibanaTestGenerator:
         self.env.tests["json_body"] = _is_json_body
         self.env.tests["string_body"] = _is_string_body
 
-    def render(self, entries, base_url=""):
+    def render(self, entries, base_url="", redact_marker=REDACTED):
         template = self.env.get_template("test_module.py.j2")
         cleaned = []
         for e in entries:
@@ -69,15 +69,24 @@ class KibanaTestGenerator:
         return template.render(
             entries=cleaned,
             base_url=base_url,
-            redacted_marker=REDACTED,
+            redacted_marker=redact_marker,
         )
 
-    def write(self, entries, output_path, base_url="", output_format="pytest"):
+    def write(
+        self,
+        entries,
+        output_path,
+        base_url="",
+        output_format="pytest",
+        redact_marker=REDACTED,
+    ):
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         if output_format == "pytest":
-            rendered = self.render(entries, base_url=base_url)
+            rendered = self.render(
+                entries, base_url=base_url, redact_marker=redact_marker
+            )
             output_path.write_text(rendered, encoding="utf-8")
         elif output_format == "json":
             self.write_json(entries, output_path)

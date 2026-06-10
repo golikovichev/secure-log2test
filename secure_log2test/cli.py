@@ -20,11 +20,25 @@ import sys
 from pathlib import Path
 
 from .core.generator import KibanaTestGenerator
-from .core.parser import KibanaLogParser
+from .core.parser import REDACTED, KibanaLogParser
 
 
 DEFAULT_MAX_INPUT_MB = 100
 SKIP_RATIO_LIMIT = 0.5
+
+
+def _nonempty_marker(value: str) -> str:
+    """argparse type for --redact-marker: reject an empty / whitespace marker.
+
+    An empty marker would silently strip the value with nothing in its place,
+    defeating the point of redaction, so it is rejected with a clear message.
+    """
+    if not value.strip():
+        raise argparse.ArgumentTypeError(
+            "--redact-marker must not be empty; pass a non-blank string "
+            'such as "[SCRUBBED]"'
+        )
+    return value
 
 
 def _ensure_utf8_stream(stream):
@@ -96,6 +110,15 @@ def main(argv: list[str] | None = None) -> int:
             f"(default: {DEFAULT_MAX_INPUT_MB}). Use 0 to disable the check."
         ),
     )
+    parser.add_argument(
+        "--redact-marker",
+        type=_nonempty_marker,
+        default=REDACTED,
+        help=(
+            "Replacement string for redacted secrets "
+            f'(default: "{REDACTED}"). Example: --redact-marker "[SCRUBBED]"'
+        ),
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -121,7 +144,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
 
-    log_parser = KibanaLogParser(args.input)
+    log_parser = KibanaLogParser(args.input, redact_marker=args.redact_marker)
     entries = log_parser.parse()
     if not entries:
         print("No entries parsed from input log.", file=sys.stderr)
@@ -129,7 +152,11 @@ def main(argv: list[str] | None = None) -> int:
 
     generator = KibanaTestGenerator(args.templates)
     generator.write(
-        entries, args.output, base_url=args.base_url, output_format=args.format
+        entries,
+        args.output,
+        base_url=args.base_url,
+        output_format=args.format,
+        redact_marker=args.redact_marker,
     )
 
     attempted = log_parser.attempted

@@ -67,6 +67,13 @@ The same logic walks request bodies recursively, so `{"password": "..."}`, `{"cl
 | `--format` | ❌ | Output format: `pytest` (default), `json`, or `csv` |
 | `--base-url`| ❌ | Base URL prefix for generated requests (`pytest` only) |
 | `--templates`| ❌ | Custom templates directory (`pytest` only) |
+| `--redact-marker`| ❌ | Replacement string for redacted secrets (default `***REDACTED***`) |
+
+Pick a marker your downstream pipeline expects:
+
+```bash
+secure-log2test data/sample_kibana_export.json --redact-marker "[SCRUBBED]"
+```
 
 The split lets you reuse the parser for other formats. If you want to generate Locust scripts, k6 scenarios, or an OpenAPI spec from the same logs, the parser stays. Only the template changes.
 
@@ -107,7 +114,6 @@ What v1.0.1 does **not** handle yet. Calling them out so the tool stays trustwor
 - Kibana / Elasticsearch JSON export shape only. Grafana Loki Explore exports are tracked in [#4](https://github.com/golikovichev/secure-log2test/issues/4).
 - Single-file input. Multi-file batch mode is on the roadmap.
 - Output format: pytest, JSON, or CSV.
-- Custom redaction marker string. The default `***REDACTED***` is hardcoded; configurable marker is tracked in [#6](https://github.com/golikovichev/secure-log2test/issues/6).
 - Response body assertions. Status code only for now, full body match is on the v1.1 list ([#1](https://github.com/golikovichev/secure-log2test/issues/1)).
 - Custom redaction rules via config file are on the v1.2 list ([#2](https://github.com/golikovichev/secure-log2test/issues/2)).
 - OAuth replay. Only static `Authorization` headers, redacted to a placeholder.
