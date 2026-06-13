@@ -41,6 +41,28 @@ def _nonempty_marker(value: str) -> str:
     return value
 
 
+def _nonneg_int(value: str) -> int:
+    """argparse type for --max-input-mb: reject a negative size limit.
+
+    0 disables the size check on purpose. A negative value is a typo (for
+    example -100 meant as 100) that would otherwise fall through the
+    `> 0` guard and silently disable the check, removing the size
+    protection without warning. Reject it with a clear message instead.
+    """
+    try:
+        parsed = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"--max-input-mb must be an integer, got {value!r}"
+        ) from None
+    if parsed < 0:
+        raise argparse.ArgumentTypeError(
+            "--max-input-mb must be 0 (disable) or a positive number of MB; "
+            f"got {parsed}"
+        )
+    return parsed
+
+
 def _ensure_utf8_stream(stream):
     """Reconfigure a text stream to UTF-8 if the platform allows it.
 
@@ -103,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--max-input-mb",
-        type=int,
+        type=_nonneg_int,
         default=DEFAULT_MAX_INPUT_MB,
         help=(
             "Reject input files larger than this size in MB "

@@ -9,6 +9,7 @@
 import json
 from pathlib import Path
 
+import pytest
 
 from secure_log2test.cli import main as cli_main
 from secure_log2test.core.parser import KibanaLogParser
@@ -74,6 +75,18 @@ def test_cli_zero_disables_size_check(tmp_path, capsys):
     exit_code = cli_main([str(path), "--max-input-mb", "0", "--output", str(out)])
     assert exit_code == 0
     assert out.exists()
+
+
+def test_cli_rejects_negative_max_input_mb(tmp_path):
+    # 0 is the documented "disable" sentinel; a negative value is a typo
+    # (e.g. -100 meant as 100) that must not silently disable the size guard.
+    path = tmp_path / "ok.json"
+    _write_kibana_export(path, [_good_record()])
+    with pytest.raises(SystemExit) as exc:
+        cli_main(
+            [str(path), "--max-input-mb", "-5", "--output", str(tmp_path / "out.py")]
+        )
+    assert exc.value.code != 0
 
 
 def test_cli_surfaces_skip_summary_in_stdout(tmp_path, capsys):

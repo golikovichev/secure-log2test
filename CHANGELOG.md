@@ -9,6 +9,9 @@ All notable changes to this project will be documented here. Format is loosely b
 - 10 new tests in `tests/test_stdout_encoding.py` covering: actual cp1252 to UTF-8 switch with Cyrillic round-trip, `io.StringIO` no-op path, non-callable `reconfigure` attribute, raising `reconfigure` (closed streams or odd wrappers), `monkeypatch`-replaced stdio, and a parametrize sweep across ASCII / Cyrillic / accented Latin / CJK / emoji. Test suite is now 86 tests.
 - Three more entries in the static `SENSITIVE_HEADERS` list: `dpop`, `x-hub-signature`, `x-hub-signature-256`. A DPoP proof JWT (RFC 9449) and webhook HMAC signature headers carry credential material, but their names contain none of the substrings the fallback pattern matches, so without explicit listing they passed through into generated suites unredacted.
 
+### Fixed
+- `--max-input-mb` now rejects a negative value with a clear argparse error instead of accepting it. `0` still disables the size check on purpose, but a negative number (a typo such as `-100` meant as `100`) previously fell through the `> 0` guard and silently disabled the check, removing the input-size protection without any warning. A new `_nonneg_int` argparse type validates the flag.
+
 ## [1.1.0] - 2026-05-15
 
 ### Added
