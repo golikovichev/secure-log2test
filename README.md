@@ -56,7 +56,7 @@ Two stages, kept separate.
 - A static list of well-known headers (`authorization`, `proxy-authorization`, `proxy-authenticate`, `cookie`, `set-cookie`, `x-api-key`, `x-auth-token`, `x-csrf-token`, `x-access-token`, `refresh-token`, `id-token`, `x-amz-security-token`, `authentication`, `dpop`, `x-hub-signature`, `x-hub-signature-256`). The last three carry credential material (a DPoP proof JWT, webhook HMAC signatures) whose names the regex below would otherwise miss.
 - A regex pattern (`auth|token|secret|key|session|cookie|credential|bearer|password|passwd`) that catches custom header names and body field names project teams invent.
 
-The same logic walks request bodies recursively, so `{"password": "..."}`, `{"client_secret": "..."}`, OAuth `{"refresh_token": "..."}` all get scrubbed at parse time. Header name matching is case-insensitive. Values get replaced with `***REDACTED***`. The original input dict is not mutated.
+The same logic walks request bodies recursively, so `{"password": "..."}`, `{"client_secret": "..."}`, OAuth `{"refresh_token": "..."}` all get scrubbed at parse time. It also runs over URL query strings, so `?access_token=...` or `?api_key=...` are redacted while the path and non-sensitive parameters stay intact. Name matching is case-insensitive. Values get replaced with `***REDACTED***`. The original input dict is not mutated.
 
 **Generate** (`core/generator.py`). Takes the cleaned entries and renders a Jinja2 template (`templates/test_module.py.j2`) into a pytest module. Each log entry becomes one `test_*` function. The slug filter turns `/api/v1/users/42` into a stable function name.
 

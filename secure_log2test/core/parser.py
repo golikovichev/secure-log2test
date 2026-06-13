@@ -65,6 +65,47 @@ def redact_headers(headers, marker=REDACTED):
     }
 
 
+def _redact_param_string(params: str, marker: str) -> str:
+    """Redact sensitive ``name=value`` pairs in an ``&``-joined string.
+
+    A pair is rewritten only when it has a value (``name=value``) and the
+    name looks sensitive. Bare flags (``token``) and non-sensitive pairs
+    are kept byte-for-byte. Values containing ``=`` are redacted whole
+    because the split happens on the first ``=`` only.
+    """
+    redacted_pairs = []
+    for pair in params.split("&"):
+        name, eq, _value = pair.partition("=")
+        if eq and _is_sensitive_name(name):
+            redacted_pairs.append(f"{name}={marker}")
+        else:
+            redacted_pairs.append(pair)
+    return "&".join(redacted_pairs)
+
+
+def redact_url(url, marker=REDACTED):
+    """Redact sensitive parameter values in a URL.
+
+    Auth headers and secret body fields are scrubbed elsewhere, but
+    credentials also travel in the URL: query strings (``?access_token=``,
+    ``?api_key=``) and OAuth2 implicit-flow fragments (``#access_token=``).
+    Both would otherwise reach the generated test verbatim. The function
+    assumes the standard ``path?query#fragment`` ordering, redacts only
+    values whose parameter name looks sensitive, and keeps the path and
+    non-sensitive parameters byte-for-byte so the request still
+    reproduces. ``marker`` overrides the default ``***REDACTED***``.
+    """
+    if not url or ("?" not in url and "#" not in url):
+        return url
+    path_and_query, hash_sep, fragment = url.partition("#")
+    base, query_sep, query = path_and_query.partition("?")
+    if query_sep:
+        query = _redact_param_string(query, marker)
+    if hash_sep and fragment:
+        fragment = _redact_param_string(fragment, marker)
+    return f"{base}{query_sep}{query}{hash_sep}{fragment}"
+
+
 def redact_body(body, marker=REDACTED):
     """Recursively redact values whose key looks sensitive.
 
@@ -112,6 +153,11 @@ class KibanaLogEntry(BaseModel):
     @classmethod
     def normalize_method(cls, v):
         return v.upper()
+
+    @field_validator("url")
+    @classmethod
+    def redact_sensitive_url(cls, v, info):
+        return redact_url(v, _marker_from_context(info))
 
     @field_validator("headers")
     @classmethod
