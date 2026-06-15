@@ -9,6 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Last commit](https://img.shields.io/github/last-commit/golikovichev/secure-log2test)](https://github.com/golikovichev/secure-log2test/commits/main)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13009/badge)](https://www.bestpractices.dev/projects/13009)
+[![Tessl](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.tessl.io%2Fv1%2Fbadges%2Fgolikovichev%2Fsecure-log2test)](https://tessl.io/registry/golikovichev/secure-log2test)
 
 Turn a Kibana API log export into an executable pytest suite. Auth headers and secret-looking body fields redacted before they reach the output.
 
