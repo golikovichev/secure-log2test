@@ -11,7 +11,7 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13009/badge)](https://www.bestpractices.dev/projects/13009)
 [![Tessl](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.tessl.io%2Fv1%2Fbadges%2Fgolikovichev%2Fsecure-log2test)](https://tessl.io/registry/golikovichev/secure-log2test)
 
-Turn a Kibana API log export into an executable pytest suite. Auth headers and secret-looking body fields redacted before they reach the output.
+Turn a Kibana or Splunk API log export into an executable pytest suite. Auth headers and secret-looking body fields redacted before they reach the output.
 
 ![secure-log2test demo](assets/demo.gif)
 
@@ -65,7 +65,8 @@ The same logic walks request bodies recursively, so `{"password": "..."}`, `{"cl
 
 | Flag | Required | Description |
 |------|----------|-------------|
-| `--input` | ✅ | Path to Kibana JSON export (positional) |
+| `--input` | ✅ | Path to a Kibana JSON or Splunk CSV/JSON export (positional) |
+| `--source` | ❌ | Input log source: `auto` (default, detect), `kibana`, or `splunk` |
 | `--output` | ✅ | Output path for generated file |
 | `--format` | ❌ | Output format: `pytest` (default), `json`, or `csv` |
 | `--base-url`| ❌ | Base URL prefix for generated requests (`pytest` only) |
@@ -114,7 +115,7 @@ The `Authorization` value never leaves the parser intact. You set the real token
 
 What v1.0.1 does **not** handle yet. Calling them out so the tool stays trustworthy.
 
-- Kibana / Elasticsearch JSON export shape only. Grafana Loki Explore exports are tracked in [#4](https://github.com/golikovichev/secure-log2test/issues/4).
+- Kibana (Elasticsearch `hits`) and Splunk (CSV / JSON search export) input shapes. Grafana Loki Explore exports are tracked in [#4](https://github.com/golikovichev/secure-log2test/issues/4).
 - Single-file input. Multi-file batch mode is on the roadmap.
 - Output format: pytest, JSON, or CSV.
 - Response body assertions. Status code only for now, full body match is on the v1.1 list ([#1](https://github.com/golikovichev/secure-log2test/issues/1)).

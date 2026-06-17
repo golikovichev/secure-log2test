@@ -1,0 +1,5 @@
+_time,_raw,host,source,sourcetype,method,uri,status,duration
+2026-06-17T10:00:00.000+00:00,"GET /api/v1/users 200 42ms",web01,/var/log/access.log,access_combined,GET,/api/v1/users,200,42
+2026-06-17T10:00:01.000+00:00,"POST /api/v1/login?access_token=supersecret 201 110ms",web01,/var/log/access.log,access_combined,POST,/api/v1/login?access_token=supersecret,201,110
+2026-06-17T10:00:02.000+00:00,"PUT /api/v1/users/42 204 87ms",web02,/var/log/access.log,access_combined,PUT,/api/v1/users/42,204,87
+2026-06-17T10:00:03.000+00:00,"malformed line without status",web02,/var/log/access.log,access_combined,DELETE,/api/v1/users/99,,21

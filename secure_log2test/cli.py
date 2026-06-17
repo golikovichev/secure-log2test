@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 from .core.generator import KibanaTestGenerator
-from .core.parser import REDACTED, KibanaLogParser
+from .core.parser import REDACTED, KibanaLogParser, SplunkLogParser, detect_source
 
 
 DEFAULT_MAX_INPUT_MB = 100
@@ -97,9 +97,21 @@ def main(argv: list[str] | None = None) -> int:
     ensure_utf8_streams()
     parser = argparse.ArgumentParser(
         prog="secure-log2test",
-        description="Convert Kibana API log export to executable pytest suite",
+        description="Convert a Kibana or Splunk API log export to an "
+        "executable pytest suite",
     )
-    parser.add_argument("input", type=Path, help="Path to Kibana JSON export")
+    parser.add_argument(
+        "input", type=Path, help="Path to a Kibana JSON or Splunk CSV/JSON export"
+    )
+    parser.add_argument(
+        "--source",
+        choices=["auto", "kibana", "splunk"],
+        default="auto",
+        help=(
+            "Input log source (default: auto-detect). kibana = Elasticsearch "
+            "hits export; splunk = Splunk search export (CSV or JSON)."
+        ),
+    )
     parser.add_argument(
         "--output",
         type=Path,
@@ -166,7 +178,9 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
 
-    log_parser = KibanaLogParser(args.input, redact_marker=args.redact_marker)
+    source = args.source if args.source != "auto" else detect_source(args.input)
+    parser_cls = SplunkLogParser if source == "splunk" else KibanaLogParser
+    log_parser = parser_cls(args.input, redact_marker=args.redact_marker)
     entries = log_parser.parse()
     if not entries:
         print("No entries parsed from input log.", file=sys.stderr)
