@@ -15,7 +15,7 @@ Turn a Kibana or Splunk API log export into an executable pytest suite. Auth hea
 
 ![secure-log2test demo](assets/demo.gif)
 
-Status: v1.1.0 on PyPI. Stable per semver. Active roadmap, see open issues.
+Status: v1.2.0 on PyPI. Stable per semver. Active roadmap, see open issues.
 
 📖 **[Read the design write-up on Dev.to](https://dev.to/golikovichev/your-kibana-logs-are-full-of-test-cases-here-is-a-cli-that-extracts-them-with-auth-scrubbed-by-4433)**: privacy constraint, three-layer redaction, the v1.0.0 to v1.0.1 user-feedback story.
 
@@ -142,7 +142,7 @@ Open the [issue tracker](https://github.com/golikovichev/secure-log2test/issues)
 pytest tests/ -v
 ```
 
-86 tests, covering:
+127 tests, covering:
 
 - Parser unit tests for valid input, malformed input, header redaction, body redaction walker, empty bodies.
 - Edge cases for 5xx responses, missing fields, custom auth header patterns, OAuth refresh tokens in request bodies.

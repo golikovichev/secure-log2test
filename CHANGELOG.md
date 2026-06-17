@@ -4,6 +4,8 @@ All notable changes to this project will be documented here. Format is loosely b
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-17
+
 ### Added
 - Splunk search-export support. A new `SplunkLogParser` reads a Splunk CSV or JSON export (one `{"result": {...}}` object per line from the export endpoint, a `{"results": [...]}` document, or a plain array) and maps each event onto the same `KibanaLogEntry` shape, so redaction and generation are reused unchanged. HTTP field names are extraction dependent, so each of method / url / status / duration resolves through an alias list (`method`/`http_method`, `uri`/`uri_path`/`url`/`request`, `status`/`status_code`, `duration`/`response_time`); events missing method/url/status are skipped and counted, the same way the Kibana parser handles bad entries. A `headers` or `body` field carrying a JSON string is decoded first so secrets inside it are redacted too.
 - New `--source {auto,kibana,splunk}` CLI flag (default `auto`). Auto-detection via `detect_source`: a `.csv` file or a JSON document carrying Splunk markers (`_raw` / `_time` / a `result` wrapper) is treated as Splunk; an Elasticsearch `hits` export stays Kibana. Existing Kibana runs are unchanged.
