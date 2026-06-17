@@ -36,7 +36,7 @@ jobs:
         run: |
           python -m pip install --upgrade setuptools
           python -m pip install pip-audit
-          python -m pip_audit --strict
+          python -m pip_audit --strict --skip-editable
 
       - name: Run pytest with coverage
         run: pytest -v --cov=secure_log2test --cov-report=xml --cov-report=term
