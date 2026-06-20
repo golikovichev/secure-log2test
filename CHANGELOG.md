@@ -4,6 +4,12 @@ All notable changes to this project will be documented here. Format is loosely b
 
 ## [Unreleased]
 
+### Added
+- Property-based fuzz tests for the Kibana parser (Hypothesis), feeding it arbitrary and deliberately malformed JSON to keep its failure modes graceful.
+
+### Fixed
+- The Kibana parser no longer crashes with an unhandled `AttributeError` or `TypeError` when the top-level `hits` is not an object, or the inner `hits.hits` is not an array. Both cases now raise the same clear `ValueError` about the expected `hits.hits[]` export shape instead of an unhandled error.
+
 ## [1.2.0] - 2026-06-17
 
 ### Added

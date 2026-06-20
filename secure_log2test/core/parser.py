@@ -211,7 +211,13 @@ class KibanaLogParser:
                 f"hits.hits[], got {type(data).__name__}.{hint}"
             )
 
-        hits = data.get("hits", {}).get("hits", [])
+        hits_container = data["hits"]
+        hits = hits_container.get("hits") if isinstance(hits_container, dict) else None
+        if not isinstance(hits, list):
+            raise ValueError(
+                f"Expected Kibana ES export shape with top-level hits.hits[] as an array, "
+                f"got hits={type(hits_container).__name__}."
+            )
         self.attempted = len(hits)
         self.skipped = 0
 
