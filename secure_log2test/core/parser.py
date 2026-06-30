@@ -415,24 +415,180 @@ class SplunkLogParser:
         )
 
 
-def detect_source(path):
-    """Best-effort input-source detection: "kibana" or "splunk".
+# --- Grafana Loki Explore export (issue #4) ----------------------------
+# Loki exports from the Explore UI as a top-level list (JSON) or a flat table
+# (CSV) where each row carries a stringified inner JSON payload in line/Line
+# plus Loki label columns. The inner payload is service-specific; we keep only
+# the rows that carry HTTP request data, resolve Loki field names through an
+# alias list, and map each onto the same KibanaLogEntry shape.
 
-    A ``.csv`` file is Splunk. A JSON object with a top-level ``hits`` key is
-    a Kibana ES export. Anything carrying Splunk markers (``_raw`` / ``_time``
-    / a ``result`` wrapper) is Splunk. Defaults to "kibana" so existing
-    behaviour is unchanged when detection is ambiguous.
+LOKI_FIELD_ALIASES = {
+    "method": ("method", "http_method", "request_method"),
+    "url": ("server_http_route", "uri", "uri_path", "url", "path", "route", "request"),
+    "status": ("http_status", "status", "status_code", "response_status"),
+    "duration": ("duration_ms", "duration", "response_time", "latency"),
+}
+
+
+def _loki_inner_payloads(rows):
+    """Parse the stringified inner JSON in each Loki row's line/Line field.
+
+    Returns ``(payloads, skipped)``. A row whose line is missing, blank, not
+    valid JSON, or not a JSON object is counted as skipped rather than parsed,
+    so a plain-text syslog line does not abort the run.
+    """
+    payloads, skipped = [], 0
+    for row in rows:
+        raw_line = row.get("line") if "line" in row else row.get("Line")
+        if not isinstance(raw_line, str) or not raw_line.strip():
+            skipped += 1
+            continue
+        try:
+            inner = json.loads(raw_line)
+        except json.JSONDecodeError:
+            skipped += 1
+            continue
+        if not isinstance(inner, dict):
+            skipped += 1
+            continue
+        payloads.append(inner)
+    return payloads, skipped
+
+
+class LokiLogParser:
+    """Parse a Grafana Loki Explore export (JSON or CSV) into KibanaLogEntry rows.
+
+    Same surface as KibanaLogParser/SplunkLogParser: ``parse()`` returns a list
+    of KibanaLogEntry, and ``attempted`` / ``skipped`` count rows seen and
+    dropped. A row whose inner payload carries no HTTP request data
+    (server_http_route + method + status) is skipped and counted, the same way
+    a non-HTTP log line is ignored rather than aborting the run.
+    """
+
+    def __init__(self, path, redact_marker=REDACTED):
+        self.path = Path(path)
+        self.redact_marker = redact_marker
+        self.attempted = 0
+        self.skipped = 0
+
+    def parse(self):
+        payloads, load_skipped = self._load_rows()
+        self.attempted = len(payloads) + load_skipped
+        self.skipped = load_skipped
+        entries = []
+        for inner in payloads:
+            try:
+                entry = self._row_to_entry(inner)
+            except Exception as e:
+                self.skipped += 1
+                logger.warning(f"Skipping bad Loki event: {e}")
+                continue
+            if entry is None:
+                self.skipped += 1  # no HTTP data: not a request line, skip
+                continue
+            entries.append(entry)
+        return entries
+
+    def _load_rows(self):
+        try:
+            text = self.path.read_text(encoding="utf-8-sig")
+        except UnicodeDecodeError as e:
+            raise ValueError(
+                f"Could not decode {self.path} as utf-8. "
+                f"Loki exports should be utf-8. Original error: {e}"
+            ) from e
+        first_line = text.lstrip().splitlines()[0] if text.strip() else ""
+        looks_json = first_line[:1] in "{["
+        if self.path.suffix.lower() == ".csv" or ("," in first_line and not looks_json):
+            rows = list(csv.DictReader(io.StringIO(text)))
+        else:
+            try:
+                data = json.loads(text) if text.strip() else []
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    "Input is not valid Loki JSON (expected a top-level list of "
+                    f"{{line, timestamp, fields}} rows). Original error: {e.msg}"
+                ) from e
+            rows = data if isinstance(data, list) else [data]
+        return _loki_inner_payloads(rows)
+
+    def _row_to_entry(self, inner):
+        method = _pick_alias(inner, LOKI_FIELD_ALIASES["method"])
+        url = _pick_alias(inner, LOKI_FIELD_ALIASES["url"])
+        status = _pick_alias(inner, LOKI_FIELD_ALIASES["status"])
+        if method is None or url is None or status is None:
+            # Not an HTTP request line. SplunkLogParser raises here instead; both
+            # styles end up skip-counted, so leave this as a quiet None (a Loki
+            # stream has many non-HTTP lines and raising would spam warnings).
+            return None
+        duration_raw = _pick_alias(inner, LOKI_FIELD_ALIASES["duration"])
+        try:
+            duration = (
+                _coerce_int(duration_raw) if duration_raw not in (None, "") else 0
+            )
+        except ValueError:
+            duration = 0
+        payload = {
+            "method": method,
+            "url": url,
+            "status": _coerce_int(status),
+            "duration": duration,
+        }
+        headers = _pick_alias(inner, ("headers",))
+        if headers is not None:
+            payload["headers"] = _decode_json_field(headers)
+        body = _pick_alias(inner, ("body", "request_body"))
+        if body is not None:
+            payload["body"] = _decode_json_field(body)
+        return KibanaLogEntry.model_validate(
+            payload, context={"redact_marker": self.redact_marker}
+        )
+
+
+def detect_source(path):
+    """Best-effort input-source detection: "kibana", "splunk", or "loki".
+
+    A ``.csv`` file with a ``Line`` column is a Loki Explore export; any other
+    ``.csv`` is Splunk. A JSON object with a top-level ``hits`` key is a Kibana
+    ES export. A top-level JSON list whose rows carry ``line`` plus
+    ``fields``/``timestamp`` is Loki. Anything carrying Splunk markers (``_raw``
+    / ``_time`` / a ``result`` wrapper) is Splunk. Defaults to "kibana" so
+    existing behaviour is unchanged when detection is ambiguous.
     """
     path = Path(path)
-    if path.suffix.lower() == ".csv":
-        return "splunk"
     text = path.read_text(encoding="utf-8-sig", errors="replace")
+    has_splunk_markers = "_raw" in text or '"result"' in text or "_time" in text
+
+    if path.suffix.lower() == ".csv":
+        # A Loki Explore CSV leads with a "Line" column and carries no Splunk
+        # _raw/_time markers; any other .csv stays Splunk. Requiring "Line"
+        # first (not merely present) avoids grabbing a Splunk file that happens
+        # to have a field named Line.
+        first_line = text.lstrip().splitlines()[0] if text.strip() else ""
+        columns = [c.strip().strip('"') for c in first_line.split(",")]
+        if columns[:1] == ["Line"] and not has_splunk_markers:
+            return "loki"
+        return "splunk"
+
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
         data = None
     if isinstance(data, dict) and "hits" in data:
         return "kibana"
-    if "_raw" in text or '"result"' in text or "_time" in text:
+    # Splunk markers win over the looser Loki shape check: a Splunk JSON event
+    # may also carry a "line"/"timestamp" field, so disambiguate on _raw/_time
+    # first.
+    if has_splunk_markers:
         return "splunk"
+    # Loki Explore JSON: a top-level list (or a single object) whose rows carry
+    # "line" plus the Loki "fields" label bag. "fields" (not a bare timestamp)
+    # is the disambiguating marker.
+    loki_row = None
+    if isinstance(data, list) and data and isinstance(data[0], dict):
+        loki_row = data[0]
+    elif isinstance(data, dict):
+        loki_row = data
+    if loki_row is not None and "line" in loki_row and "fields" in loki_row:
+        return "loki"
     return "kibana"

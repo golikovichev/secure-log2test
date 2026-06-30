@@ -5,6 +5,7 @@ All notable changes to this project will be documented here. Format is loosely b
 ## [Unreleased]
 
 ### Added
+- Grafana Loki Explore export support (closes #4). A new `LokiLogParser` reads a Loki Explore JSON list or CSV, where each row wraps a stringified inner JSON payload in `line`/`Line` plus Loki label columns. It parses the inner payload, keeps only rows that carry HTTP request data, and maps Loki field names onto the same `KibanaLogEntry` shape so redaction and generation are reused unchanged. URL/status/method/duration resolve through an alias list led by the Loki-specific `server_http_route`/`http_status`/`duration_ms`; a row whose payload is non-HTTP or whose `line` is not JSON is skipped and counted, the same way the Kibana and Splunk parsers handle bad entries. New `--source` choice `loki`, and `detect_source` recognises a CSV led by a `Line` column or a JSON list/object carrying `line` + Loki `fields` (Splunk `_raw`/`_time` markers still take precedence). Sample exports `data/sample_loki_export.{json,csv}` plus 14 tests in `tests/test_loki_parser.py`.
 - Property-based fuzz tests for the Kibana parser (Hypothesis), feeding it arbitrary and deliberately malformed JSON to keep its failure modes graceful.
 
 ### Fixed

@@ -20,7 +20,13 @@ import sys
 from pathlib import Path
 
 from .core.generator import KibanaTestGenerator
-from .core.parser import REDACTED, KibanaLogParser, SplunkLogParser, detect_source
+from .core.parser import (
+    REDACTED,
+    KibanaLogParser,
+    LokiLogParser,
+    SplunkLogParser,
+    detect_source,
+)
 
 
 DEFAULT_MAX_INPUT_MB = 100
@@ -105,11 +111,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--source",
-        choices=["auto", "kibana", "splunk"],
+        choices=["auto", "kibana", "splunk", "loki"],
         default="auto",
         help=(
             "Input log source (default: auto-detect). kibana = Elasticsearch "
-            "hits export; splunk = Splunk search export (CSV or JSON)."
+            "hits export; splunk = Splunk search export (CSV or JSON); "
+            "loki = Grafana Loki Explore export (JSON or CSV)."
         ),
     )
     parser.add_argument(
@@ -179,7 +186,12 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
     source = args.source if args.source != "auto" else detect_source(args.input)
-    parser_cls = SplunkLogParser if source == "splunk" else KibanaLogParser
+    parsers = {
+        "kibana": KibanaLogParser,
+        "splunk": SplunkLogParser,
+        "loki": LokiLogParser,
+    }
+    parser_cls = parsers.get(source, KibanaLogParser)
     log_parser = parser_cls(args.input, redact_marker=args.redact_marker)
     entries = log_parser.parse()
     if not entries:
