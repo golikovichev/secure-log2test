@@ -65,8 +65,8 @@ The same logic walks request bodies recursively, so `{"password": "..."}`, `{"cl
 
 | Flag | Required | Description |
 |------|----------|-------------|
-| `--input` | ✅ | Path to a Kibana JSON or Splunk CSV/JSON export (positional) |
-| `--source` | ❌ | Input log source: `auto` (default, detect), `kibana`, or `splunk` |
+| `--input` | ✅ | Path to a Kibana JSON, Splunk CSV/JSON, or Grafana Loki CSV/JSON export (positional) |
+| `--source` | ❌ | Input log source: `auto` (default, detect), `kibana`, `splunk`, or `loki` |
 | `--output` | ✅ | Output path for generated file |
 | `--format` | ❌ | Output format: `pytest` (default), `json`, or `csv` |
 | `--base-url`| ❌ | Base URL prefix for generated requests (`pytest` only) |
@@ -115,7 +115,7 @@ The `Authorization` value never leaves the parser intact. You set the real token
 
 What v1.0.1 does **not** handle yet. Calling them out so the tool stays trustworthy.
 
-- Kibana (Elasticsearch `hits`) and Splunk (CSV / JSON search export) input shapes. Grafana Loki Explore exports are tracked in [#4](https://github.com/golikovichev/secure-log2test/issues/4).
+- Input shapes other than Kibana (Elasticsearch `hits`), Splunk (CSV / JSON), and Grafana Loki Explore (CSV / JSON) search exports.
 - Single-file input. Multi-file batch mode is on the roadmap.
 - Output format: pytest, JSON, or CSV.
 - Response body assertions. Status code only for now, full body match is on the v1.1 list ([#1](https://github.com/golikovichev/secure-log2test/issues/1)).
@@ -132,7 +132,6 @@ If something on this list blocks you, open an issue.
 | --- | --- | --- |
 | v1.1 | [#1](https://github.com/golikovichev/secure-log2test/issues/1) | Response body assertions plus optional schema match. |
 | v1.2 | [#2](https://github.com/golikovichev/secure-log2test/issues/2) | Custom redaction rules via config file. |
-| Future | [#4](https://github.com/golikovichev/secure-log2test/issues/4) | Grafana Loki Explore export format support. |
 
 Open the [issue tracker](https://github.com/golikovichev/secure-log2test/issues) for the live picture; two `good first issue` slots are currently open if you want to jump in.
 

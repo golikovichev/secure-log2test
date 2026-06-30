@@ -1,0 +1,4 @@
+Line,app,namespace,timestamp
+"{""method"": ""GET"", ""server_http_route"": ""/api/v1/users"", ""http_status"": 200, ""duration_ms"": 42}",api-gateway,production,1778495997463979482
+"{""method"": ""POST"", ""server_http_route"": ""/api/v1/login?access_token=supersecret"", ""http_status"": 201, ""duration_ms"": 110}",api-gateway,production,1778495997463979483
+"{""level"": ""info"", ""msg"": ""cache warmed""}",worker,production,1778495997463979484
