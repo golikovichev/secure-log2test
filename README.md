@@ -25,7 +25,7 @@ You have Kibana logs from staging or production. Each entry is a real request: m
 
 I needed a faster path. `secure-log2test` reads a Kibana JSON export and writes a pytest module you can run and commit. Auth values get replaced with `***REDACTED***` before they ever touch the output, so a generated suite is safe to push to a public repo.
 
-The tool exists because at Лента I kept doing the same five steps by hand for every production incident: open Kibana, scroll, copy the failing request, paste into a new test, repeat. Five minutes per request times ten requests means an hour gone before any actual debugging starts.
+The tool exists because at work I kept doing the same five steps by hand for every production incident: open Kibana, scroll, copy the failing request, paste into a new test, repeat. Five minutes per request times ten requests means an hour gone before any actual debugging starts.
 
 ## Quickstart
 

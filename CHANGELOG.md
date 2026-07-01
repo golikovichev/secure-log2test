@@ -10,6 +10,7 @@ All notable changes to this project will be documented here. Format is loosely b
 - Property-based fuzz tests for the Kibana parser (Hypothesis), feeding it arbitrary and deliberately malformed JSON to keep its failure modes graceful.
 
 ### Fixed
+- Redaction now covers the `pwd` field and parameter name. `pwd` is a common abbreviation for a password, but the sensitive-name pattern knew only `password` and `passwd`, so a `pwd` body field, header, or URL parameter leaked its value into the generated suite. Added to the pattern (low false-positive; `pwd` rarely appears as a substring of unrelated names). Covered by `tests/test_redact_pwd.py`.
 - The Kibana parser no longer crashes with an unhandled `AttributeError` or `TypeError` when the top-level `hits` is not an object, or the inner `hits.hits` is not an array. Both cases now raise the same clear `ValueError` about the expected `hits.hits[]` export shape instead of an unhandled error.
 
 ## [1.2.0] - 2026-06-17

@@ -36,7 +36,7 @@ SENSITIVE_HEADERS = frozenset(
 # Catches custom headers and body field names that imply credentials.
 # Matched case-insensitively against the full name as a substring.
 SENSITIVE_NAME_PATTERN = re.compile(
-    r"auth|token|secret|key|session|cookie|credential|bearer|password|passwd",
+    r"auth|token|secret|key|session|cookie|credential|bearer|password|passwd|pwd",
     re.IGNORECASE,
 )
 
