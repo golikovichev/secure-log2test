@@ -19,6 +19,7 @@ import logging
 import sys
 from pathlib import Path
 
+from .core.assertions import AssertionMatcher, load_assertion_config
 from .core.generator import KibanaTestGenerator
 from .core.parser import (
     REDACTED,
@@ -160,6 +161,16 @@ def main(argv: list[str] | None = None) -> int:
             f'(default: "{REDACTED}"). Example: --redact-marker "[SCRUBBED]"'
         ),
     )
+    parser.add_argument(
+        "--assert-config",
+        type=Path,
+        default=None,
+        help=(
+            "Path to a JSON assertion config that adds response-body checks "
+            "(field equality and optional JSON Schema) per endpoint to the "
+            "generated pytest suite. Only applies to --format pytest."
+        ),
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -198,6 +209,31 @@ def main(argv: list[str] | None = None) -> int:
         print("No entries parsed from input log.", file=sys.stderr)
         return 1
 
+    matcher = None
+    if args.assert_config is not None:
+        if args.format != "pytest":
+            print(
+                "--assert-config only applies to --format pytest; ignoring it "
+                f"for --format {args.format}.",
+                file=sys.stderr,
+            )
+        else:
+            try:
+                matcher = AssertionMatcher(load_assertion_config(args.assert_config))
+            except ValueError as e:
+                print(str(e), file=sys.stderr)
+                return 1
+            # An assertion rule that matches no request is almost always a typo
+            # in method/url; warn so it is not silently dropped.
+            matched_ids = {id(rule) for e in entries for rule in matcher.for_entry(e)}
+            for rule in matcher.rules:
+                if id(rule) not in matched_ids:
+                    print(
+                        f"Assertion rule for {rule.method} {rule.url} matched no "
+                        f"requests in the log; check its method and url.",
+                        file=sys.stderr,
+                    )
+
     generator = KibanaTestGenerator(args.templates)
     generator.write(
         entries,
@@ -205,6 +241,7 @@ def main(argv: list[str] | None = None) -> int:
         base_url=args.base_url,
         output_format=args.format,
         redact_marker=args.redact_marker,
+        matcher=matcher,
     )
 
     attempted = log_parser.attempted

@@ -8,6 +8,9 @@ override the redacted entries in `headers={...}` below.
 
 import pytest
 import requests
+{% if needs_jsonschema %}
+import jsonschema
+{% endif %}
 
 
 BASE_URL = {{ base_url | python_repr }}
@@ -29,6 +32,20 @@ def test_{{ entry.method | slug }}_{{ entry.url | slug }}_{{ loop.index }}():
         timeout=10,
     )
     assert response.status_code == {{ entry.status }}
+{% set rules = assertions[loop.index0] %}
+{% if rules %}
+    content_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
+    if content_type == "application/json":
+        body = response.json()
+{% for rule in rules %}
+{% for field, value in rule.expect_fields.items() %}
+        assert body[{{ field | python_repr }}] == {{ value | python_repr }}
+{% endfor %}
+{% if rule.schema_obj is not none %}
+        jsonschema.validate(body, {{ rule.schema_obj | python_repr }})
+{% endif %}
+{% endfor %}
+{% endif %}
 
 
 {% endfor %}

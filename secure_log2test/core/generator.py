@@ -58,7 +58,7 @@ class KibanaTestGenerator:
         self.env.tests["json_body"] = _is_json_body
         self.env.tests["string_body"] = _is_string_body
 
-    def render(self, entries, base_url="", redact_marker=REDACTED):
+    def render(self, entries, base_url="", redact_marker=REDACTED, matcher=None):
         template = self.env.get_template("test_module.py.j2")
         cleaned = []
         for e in entries:
@@ -66,10 +66,23 @@ class KibanaTestGenerator:
                 cleaned.append(e)
             else:
                 cleaned.append(KibanaLogEntry(**e))
+        # Per-entry list of matching assertion rules, aligned by position with
+        # `cleaned` so the template looks them up via loop.index0. An empty
+        # list (no matcher, or no rule matches) renders no body assertions, so
+        # the default output is unchanged.
+        assertions = [matcher.for_entry(e) if matcher else [] for e in cleaned]
+        # jsonschema is imported once at module top only when some rule carries
+        # a schema, so tests without a schema match keep a dependency-free import
+        # block.
+        needs_jsonschema = any(
+            rule.schema_obj is not None for rules in assertions for rule in rules
+        )
         return template.render(
             entries=cleaned,
             base_url=base_url,
             redacted_marker=redact_marker,
+            assertions=assertions,
+            needs_jsonschema=needs_jsonschema,
         )
 
     def write(
@@ -79,13 +92,17 @@ class KibanaTestGenerator:
         base_url="",
         output_format="pytest",
         redact_marker=REDACTED,
+        matcher=None,
     ):
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         if output_format == "pytest":
             rendered = self.render(
-                entries, base_url=base_url, redact_marker=redact_marker
+                entries,
+                base_url=base_url,
+                redact_marker=redact_marker,
+                matcher=matcher,
             )
             output_path.write_text(rendered, encoding="utf-8")
         elif output_format == "json":

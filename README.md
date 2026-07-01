@@ -72,12 +72,39 @@ The same logic walks request bodies recursively, so `{"password": "..."}`, `{"cl
 | `--base-url`| ❌ | Base URL prefix for generated requests (`pytest` only) |
 | `--templates`| ❌ | Custom templates directory (`pytest` only) |
 | `--redact-marker`| ❌ | Replacement string for redacted secrets (default `***REDACTED***`) |
+| `--assert-config`| ❌ | JSON config that adds response-body assertions per endpoint (`pytest` only) |
 
 Pick a marker your downstream pipeline expects:
 
 ```bash
 secure-log2test data/sample_kibana_export.json --redact-marker "[SCRUBBED]"
 ```
+
+### Response body assertions
+
+By default a generated test checks the status code. Log exports rarely carry the response body, so richer checks are user-declared in a JSON config passed with `--assert-config`. Each rule targets an endpoint by `method` and `url` (matched exactly against the request as it appears in the generated test, url compared after redaction) and adds field-level equality and/or a JSON Schema match:
+
+```json
+{
+  "rules": [
+    {
+      "method": "GET",
+      "url": "/api/v1/users",
+      "expect_fields": {"page": 1, "total": 42},
+      "schema": "schemas/users.json"
+    }
+  ]
+}
+```
+
+```bash
+secure-log2test data/sample_kibana_export.json --assert-config assertions.json
+```
+
+- `expect_fields` compares top-level JSON keys for equality.
+- `schema` points to a JSON Schema file relative to the config; it is read at generation time and inlined into the test, so the emitted suite needs no schema file alongside it at run time.
+- A schema rule makes the generated test import `jsonschema`; install it (`pip install jsonschema`) only when you use one.
+- Every check runs behind a `content-type` guard, so a non-JSON response skips the body assertion instead of failing on `response.json()`.
 
 The split lets you reuse the parser for other formats. If you want to generate Locust scripts, k6 scenarios, or an OpenAPI spec from the same logs, the parser stays. Only the template changes.
 
@@ -118,7 +145,7 @@ What v1.0.1 does **not** handle yet. Calling them out so the tool stays trustwor
 - Input shapes other than Kibana (Elasticsearch `hits`), Splunk (CSV / JSON), and Grafana Loki Explore (CSV / JSON) search exports.
 - Single-file input. Multi-file batch mode is on the roadmap.
 - Output format: pytest, JSON, or CSV.
-- Response body assertions. Status code only for now, full body match is on the v1.1 list ([#1](https://github.com/golikovichev/secure-log2test/issues/1)).
+- Nested and repeated JSON fields in body assertions. `expect_fields` compares top-level keys only (see [Response body assertions](#response-body-assertions)); deeper paths are not matched yet.
 - Custom redaction rules via config file are on the v1.2 list ([#2](https://github.com/golikovichev/secure-log2test/issues/2)).
 - OAuth replay. Only static `Authorization` headers, redacted to a placeholder.
 - Multipart bodies and file uploads.
@@ -130,8 +157,8 @@ If something on this list blocks you, open an issue.
 
 | Version | Tracks | Adds |
 | --- | --- | --- |
-| v1.1 | [#1](https://github.com/golikovichev/secure-log2test/issues/1) | Response body assertions plus optional schema match. |
-| v1.2 | [#2](https://github.com/golikovichev/secure-log2test/issues/2) | Custom redaction rules via config file. |
+| Unreleased | [#1](https://github.com/golikovichev/secure-log2test/issues/1) | Response body assertions plus optional schema match (landed, see [Response body assertions](#response-body-assertions)). |
+| Next | [#2](https://github.com/golikovichev/secure-log2test/issues/2) | Custom redaction rules via config file. |
 
 Open the [issue tracker](https://github.com/golikovichev/secure-log2test/issues) for the live picture; two `good first issue` slots are currently open if you want to jump in.
 
