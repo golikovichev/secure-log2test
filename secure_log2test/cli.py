@@ -27,7 +27,9 @@ from .core.parser import (
     LokiLogParser,
     SplunkLogParser,
     detect_source,
+    install_redaction_rules,
 )
+from .core.redaction_config import CONFIG_FILENAME, load_redaction_rules
 
 
 DEFAULT_MAX_INPUT_MB = 100
@@ -195,6 +197,29 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
+
+    # Look for the redaction config beside the input export first, then in the
+    # current directory, so running from elsewhere still picks up the rules
+    # that live with the data. Silent fallback to defaults would be the wrong
+    # failure mode for a redaction tool, so a found config is logged.
+    config_dir = None
+    for candidate in (args.input.parent, Path.cwd()):
+        if (candidate / CONFIG_FILENAME).is_file():
+            config_dir = candidate
+            break
+    try:
+        extra_header_names, extra_field_patterns = load_redaction_rules(config_dir)
+        install_redaction_rules(
+            extra_header_names=extra_header_names,
+            extra_field_patterns=extra_field_patterns,
+        )
+    except (ValueError, OSError) as exc:
+        print(f"Invalid {CONFIG_FILENAME}: {exc}", file=sys.stderr)
+        return 1
+    if config_dir is not None:
+        logging.getLogger(__name__).info(
+            "Loaded redaction rules from %s", config_dir / CONFIG_FILENAME
+        )
 
     source = args.source if args.source != "auto" else detect_source(args.input)
     parsers = {

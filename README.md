@@ -55,7 +55,7 @@ Two stages, kept separate.
 **Parse** (`core/parser.py`). Reads the Kibana JSON and validates each entry through Pydantic v2. Two layers of redaction run before any further processing:
 
 - A static list of well-known headers (`authorization`, `proxy-authorization`, `proxy-authenticate`, `cookie`, `set-cookie`, `x-api-key`, `x-auth-token`, `x-csrf-token`, `x-access-token`, `refresh-token`, `id-token`, `x-amz-security-token`, `authentication`, `dpop`, `x-hub-signature`, `x-hub-signature-256`). The last three carry credential material (a DPoP proof JWT, webhook HMAC signatures) whose names the regex below would otherwise miss.
-- A regex pattern (`auth|token|secret|key|session|cookie|credential|bearer|password|passwd`) that catches custom header names and body field names project teams invent.
+- A regex pattern (`auth|token|secret|key|session|cookie|credential|bearer|password|passwd|pwd`) that catches custom header names and body field names project teams invent.
 
 The same logic walks request bodies recursively, so `{"password": "..."}`, `{"client_secret": "..."}`, OAuth `{"refresh_token": "..."}` all get scrubbed at parse time. It also runs over URL query strings, so `?access_token=...` or `?api_key=...` are redacted while the path and non-sensitive parameters stay intact. Name matching is case-insensitive. Values get replaced with `***REDACTED***`. The original input dict is not mutated.
 
@@ -108,6 +108,22 @@ secure-log2test data/sample_kibana_export.json --assert-config assertions.json
 
 The split lets you reuse the parser for other formats. If you want to generate Locust scripts, k6 scenarios, or an OpenAPI spec from the same logs, the parser stays. Only the template changes.
 
+### Custom redaction rules
+
+The built-in blacklist covers the common credential names. When your team uses its own (an internal tenant token, a bespoke secret field, a national ID field), drop a `secure-log2test.toml` in the directory you run the tool from:
+
+```toml
+[redaction]
+extra_header_names = ["x-tenant-ref", "x-internal-token"]
+extra_field_patterns = ["ssn", "account_number"]
+```
+
+- `extra_header_names` are exact header names, matched case-insensitively.
+- `extra_field_patterns` are regexes matched as a substring against header, body-field, and URL-parameter names, the same surface the built-in matcher covers.
+- The built-in defaults always stay on; config only adds. A pattern that does not compile stops the run with a clear error rather than silently passing secrets through.
+
+No config file means the built-in behaviour is unchanged. On Python 3.10 the file is parsed with `tomli`; 3.11+ uses the standard-library `tomllib`.
+
 ## Sample output
 
 Given this Kibana log entry:
@@ -146,7 +162,7 @@ What v1.0.1 does **not** handle yet. Calling them out so the tool stays trustwor
 - Single-file input. Multi-file batch mode is on the roadmap.
 - Output format: pytest, JSON, or CSV.
 - Nested and repeated JSON fields in body assertions. `expect_fields` compares top-level keys only (see [Response body assertions](#response-body-assertions)); deeper paths are not matched yet.
-- Custom redaction rules via config file are on the v1.2 list ([#2](https://github.com/golikovichev/secure-log2test/issues/2)).
+- JSON-path body-field redaction. Custom header names and field-name patterns now load from `secure-log2test.toml` (see [Custom redaction rules](#custom-redaction-rules)); redacting a specific nested JSON path is still open on [#2](https://github.com/golikovichev/secure-log2test/issues/2).
 - OAuth replay. Only static `Authorization` headers, redacted to a placeholder.
 - Multipart bodies and file uploads.
 - Streaming responses or chunked transfer.
@@ -158,7 +174,7 @@ If something on this list blocks you, open an issue.
 | Version | Tracks | Adds |
 | --- | --- | --- |
 | Unreleased | [#1](https://github.com/golikovichev/secure-log2test/issues/1) | Response body assertions plus optional schema match (landed, see [Response body assertions](#response-body-assertions)). |
-| Next | [#2](https://github.com/golikovichev/secure-log2test/issues/2) | Custom redaction rules via config file. |
+| Unreleased | [#2](https://github.com/golikovichev/secure-log2test/issues/2) | Custom redaction rules via config file. Config-driven header names and field-name patterns landed (see [Custom redaction rules](#custom-redaction-rules)); JSON-path body redaction still open. |
 
 Open the [issue tracker](https://github.com/golikovichev/secure-log2test/issues) for the live picture; two `good first issue` slots are currently open if you want to jump in.
 
@@ -168,7 +184,7 @@ Open the [issue tracker](https://github.com/golikovichev/secure-log2test/issues)
 pytest tests/ -v
 ```
 
-127 tests, covering:
+183 tests, covering:
 
 - Parser unit tests for valid input, malformed input, header redaction, body redaction walker, empty bodies.
 - Edge cases for 5xx responses, missing fields, custom auth header patterns, OAuth refresh tokens in request bodies.
@@ -178,7 +194,7 @@ CI runs on Python 3.10, 3.11, 3.12, and 3.13 via GitHub Actions.
 
 ## Security note
 
-The redaction layer catches the well-known auth headers plus anything whose name contains `auth`, `token`, `secret`, `key`, `session`, `cookie`, `credential`, `bearer`, `password`, or `passwd`. This works for both header names and JSON body field names. If your team uses something the pattern misses (truly opaque internal name), add it to `SENSITIVE_HEADERS` in `core/parser.py` before generating output. PRs welcome.
+The redaction layer catches the well-known auth headers plus anything whose name contains `auth`, `token`, `secret`, `key`, `session`, `cookie`, `credential`, `bearer`, `password`, `passwd`, or `pwd`. This works for both header names and JSON body field names. If your team uses something the pattern misses (a truly opaque internal name), add it in a `secure-log2test.toml` (see [Custom redaction rules](#custom-redaction-rules)), or to `SENSITIVE_HEADERS` in `core/parser.py`, before generating output. PRs welcome.
 
 Never commit a generated suite that includes real production tokens. The redaction layer is a safety net, not a substitute for review.
 

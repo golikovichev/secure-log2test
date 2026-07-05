@@ -43,11 +43,57 @@ SENSITIVE_NAME_PATTERN = re.compile(
 REDACTED = "***REDACTED***"
 
 
+# User-supplied rules, layered on top of the built-in blacklist above.
+# Empty by default; install_redaction_rules() fills them from config so a
+# deployment can add its own sensitive names without patching the source.
+# Process-global: the CLI installs once at startup. A library consumer that
+# parses two exports with different rules concurrently would cross-contaminate,
+# so install_redaction_rules is not concurrency-safe.
+_EXTRA_HEADER_NAMES: frozenset[str] = frozenset()
+_EXTRA_NAME_PATTERNS: tuple[re.Pattern[str], ...] = ()
+
+
+def install_redaction_rules(extra_header_names=(), extra_field_patterns=()) -> None:
+    """Extend the built-in matcher with user rules (issue #2).
+
+    ``extra_header_names`` are exact names, matched case-insensitively against
+    any header, body-field or URL-parameter name (the matcher is shared across
+    all three surfaces). ``extra_field_patterns`` are regex strings matched as
+    a substring against the same names. The built-in defaults are never
+    removed; this only adds. Raises ``ValueError`` on a regex that does not
+    compile, and does so before mutating any state (all-or-nothing).
+
+    Security: patterns are compiled with ``re.IGNORECASE`` and run against
+    field names that may come from a semi-trusted log export, so a
+    catastrophic-backtracking pattern could hang the run. Patterns must come
+    from a trusted config, not from untrusted input.
+    """
+    compiled = []
+    for pat in extra_field_patterns:
+        try:
+            compiled.append(re.compile(pat, re.IGNORECASE))
+        except re.error as exc:
+            raise ValueError(f"invalid redaction regex {pat!r}: {exc}") from exc
+    names = frozenset(n.lower() for n in extra_header_names)
+    global _EXTRA_HEADER_NAMES, _EXTRA_NAME_PATTERNS
+    _EXTRA_HEADER_NAMES = names
+    _EXTRA_NAME_PATTERNS = tuple(compiled)
+
+
+def reset_redaction_rules():
+    """Drop all user rules and fall back to the built-in blacklist only."""
+    global _EXTRA_HEADER_NAMES, _EXTRA_NAME_PATTERNS
+    _EXTRA_HEADER_NAMES = frozenset()
+    _EXTRA_NAME_PATTERNS = ()
+
+
 def _is_sensitive_name(name: str) -> bool:
     lowered = name.lower()
-    if lowered in SENSITIVE_HEADERS:
+    if lowered in SENSITIVE_HEADERS or lowered in _EXTRA_HEADER_NAMES:
         return True
-    return bool(SENSITIVE_NAME_PATTERN.search(lowered))
+    if SENSITIVE_NAME_PATTERN.search(lowered):
+        return True
+    return any(p.search(lowered) for p in _EXTRA_NAME_PATTERNS)
 
 
 def redact_headers(headers, marker=REDACTED):
