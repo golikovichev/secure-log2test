@@ -44,8 +44,11 @@ json_values = st.recursive(
 
 
 def _parse(value: object) -> list:
-    path = Path(tempfile.mktemp(suffix=".json"))
-    path.write_text(json.dumps(value), encoding="utf-8")
+    with tempfile.NamedTemporaryFile(
+        "w", suffix=".json", delete=False, encoding="utf-8"
+    ) as tmp:
+        tmp.write(json.dumps(value))
+        path = Path(tmp.name)
     try:
         return KibanaLogParser(path).parse()
     finally:
