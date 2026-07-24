@@ -208,10 +208,13 @@ def main(argv: list[str] | None = None) -> int:
             config_dir = candidate
             break
     try:
-        extra_header_names, extra_field_patterns = load_redaction_rules(config_dir)
+        extra_header_names, extra_field_patterns, extra_field_paths = (
+            load_redaction_rules(config_dir)
+        )
         install_redaction_rules(
             extra_header_names=extra_header_names,
             extra_field_patterns=extra_field_patterns,
+            extra_field_paths=extra_field_paths,
         )
     except (ValueError, OSError) as exc:
         print(f"Invalid {CONFIG_FILENAME}: {exc}", file=sys.stderr)

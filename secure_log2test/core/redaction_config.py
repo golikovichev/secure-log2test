@@ -8,13 +8,17 @@ field, a national ID field. Rather than patch the source, a user drops a
     [redaction]
     extra_header_names = ["x-tenant-ref", "x-internal-token"]
     extra_field_patterns = ["ssn", "account_number"]
+    extra_field_paths = ["data.user.note", "items.ref"]
 
 ``extra_header_names`` are exact names, matched case-insensitively; the
 common case is a custom header, but the matcher is shared, so an exact name
 also redacts a matching body field or URL parameter. ``extra_field_patterns``
-are regexes matched as a substring against the same names. The built-in
-defaults always stay on; config only adds. Patterns must come from a trusted
-config: they run against semi-trusted log field names, so a
+are regexes matched as a substring against the same names. ``extra_field_paths``
+are ``a.b.c`` dict-key paths whose value is redacted by position rather than
+by name, for a body field whose key is innocuous but whose value is sensitive
+(a free-text note, an internal id); a ``*`` segment matches any one key. The
+built-in defaults always stay on; config only adds. Patterns must come from a
+trusted config: they run against semi-trusted log field names, so a
 catastrophic-backtracking regex could hang the run.
 """
 
@@ -33,19 +37,21 @@ CONFIG_FILENAME = "secure-log2test.toml"
 
 def load_redaction_rules(
     start_dir: Path | str | None = None,
-) -> tuple[list[str], list[str]]:
+) -> tuple[list[str], list[str], list[str]]:
     """Read redaction rules from ``secure-log2test.toml`` in ``start_dir``.
 
-    Returns ``(extra_header_names, extra_field_patterns)`` as raw strings.
-    A missing file, or a file with no ``[redaction]`` table, yields two
-    empty lists so the caller falls back to the built-in defaults. Pattern
-    strings are returned verbatim; they are compiled (and validated) at
-    install time, not here.
+    Returns ``(extra_header_names, extra_field_patterns, extra_field_paths)``
+    as raw strings. A missing file, or a file with no ``[redaction]`` table,
+    yields three empty lists so the caller falls back to the built-in
+    defaults. ``extra_field_paths`` are ``a.b.c`` dict-key paths whose value
+    is redacted by position rather than by name. Pattern and path strings are
+    returned verbatim; they are compiled (and validated) at install time,
+    not here.
     """
     base = Path(start_dir) if start_dir is not None else Path.cwd()
     config_path = base / CONFIG_FILENAME
     if not config_path.is_file():
-        return [], []
+        return [], [], []
 
     with config_path.open("rb") as fh:
         data = tomllib.load(fh)
@@ -53,7 +59,8 @@ def load_redaction_rules(
     section = data.get("redaction", {})
     names = _string_list(section, "extra_header_names")
     patterns = _string_list(section, "extra_field_patterns")
-    return names, patterns
+    paths = _string_list(section, "extra_field_paths")
+    return names, patterns, paths
 
 
 def _string_list(section: dict, key: str) -> list[str]:

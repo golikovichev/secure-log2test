@@ -116,11 +116,13 @@ The built-in blacklist covers the common credential names. When your team uses i
 [redaction]
 extra_header_names = ["x-tenant-ref", "x-internal-token"]
 extra_field_patterns = ["ssn", "account_number"]
+extra_field_paths = ["data.user.note", "items.ref"]
 ```
 
 - `extra_header_names` are exact header names, matched case-insensitively.
 - `extra_field_patterns` are regexes matched as a substring against header, body-field, and URL-parameter names, the same surface the built-in matcher covers.
-- The built-in defaults always stay on; config only adds. A pattern that does not compile stops the run with a clear error rather than silently passing secrets through.
+- `extra_field_paths` are `a.b.c` body dict-key paths, for a field whose key is innocuous but whose value is sensitive (a free-text note, an internal id) so the name-based rules miss it. A path matches in full only, a `*` segment matches any one key (`data.*.token`), and lists are transparent so `items.ref` reaches every element. Keys match case-insensitively, like the rest of the redactor; a key that literally contains a dot cannot be targeted.
+- The built-in defaults always stay on; config only adds. A pattern or path that is malformed stops the run with a clear error rather than silently passing secrets through.
 
 No config file means the built-in behaviour is unchanged. On Python 3.10 the file is parsed with `tomli`; 3.11+ uses the standard-library `tomllib`.
 

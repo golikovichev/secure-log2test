@@ -51,17 +51,46 @@ REDACTED = "***REDACTED***"
 # so install_redaction_rules is not concurrency-safe.
 _EXTRA_HEADER_NAMES: frozenset[str] = frozenset()
 _EXTRA_NAME_PATTERNS: tuple[re.Pattern[str], ...] = ()
+# Exact dict-key paths whose value is redacted regardless of the key name,
+# e.g. ("data", "user", "note"). A "*" segment matches any one key. Lists are
+# transparent (see redact_body), so ("items", "ref") reaches every element.
+_EXTRA_FIELD_PATHS: tuple[tuple[str, ...], ...] = ()
 
 
-def install_redaction_rules(extra_header_names=(), extra_field_patterns=()) -> None:
+def _parse_field_path(raw: str) -> tuple[str, ...]:
+    """Split a ``a.b.c`` field-path string into normalised segments.
+
+    Each segment is stripped of surrounding whitespace and lower-cased, so
+    ``data. user.Note`` and ``data.user.note`` install the same rule and
+    matching is case-insensitive like the rest of the redactor. Raises
+    ``ValueError`` on an empty path or an empty segment (a leading, trailing
+    or doubled dot, or a whitespace-only segment), so a config typo such as
+    ``a..b`` fails loudly instead of installing a rule that can never match.
+    A key that literally contains a dot cannot be targeted; there is no
+    escaping mechanism.
+    """
+    if not raw.strip():
+        raise ValueError(f"invalid redaction field path {raw!r}: empty path")
+    segments = tuple(seg.strip() for seg in raw.split("."))
+    if any(seg == "" for seg in segments):
+        raise ValueError(f"invalid redaction field path {raw!r}: empty segment")
+    return tuple(seg.lower() for seg in segments)
+
+
+def install_redaction_rules(
+    extra_header_names=(), extra_field_patterns=(), extra_field_paths=()
+) -> None:
     """Extend the built-in matcher with user rules (issue #2).
 
     ``extra_header_names`` are exact names, matched case-insensitively against
     any header, body-field or URL-parameter name (the matcher is shared across
     all three surfaces). ``extra_field_patterns`` are regex strings matched as
-    a substring against the same names. The built-in defaults are never
-    removed; this only adds. Raises ``ValueError`` on a regex that does not
-    compile, and does so before mutating any state (all-or-nothing).
+    a substring against the same names. ``extra_field_paths`` are ``a.b.c``
+    dict-key paths whose value is redacted by position rather than by name,
+    for a field whose key is innocuous but whose value is sensitive. The
+    built-in defaults are never removed; this only adds. Raises ``ValueError``
+    on a regex that does not compile or a malformed path, and does so before
+    mutating any state (all-or-nothing).
 
     Security: patterns are compiled with ``re.IGNORECASE`` and run against
     field names that may come from a semi-trusted log export, so a
@@ -74,17 +103,37 @@ def install_redaction_rules(extra_header_names=(), extra_field_patterns=()) -> N
             compiled.append(re.compile(pat, re.IGNORECASE))
         except re.error as exc:
             raise ValueError(f"invalid redaction regex {pat!r}: {exc}") from exc
+    paths = tuple(_parse_field_path(p) for p in extra_field_paths)
     names = frozenset(n.lower() for n in extra_header_names)
-    global _EXTRA_HEADER_NAMES, _EXTRA_NAME_PATTERNS
+    global _EXTRA_HEADER_NAMES, _EXTRA_NAME_PATTERNS, _EXTRA_FIELD_PATHS
     _EXTRA_HEADER_NAMES = names
     _EXTRA_NAME_PATTERNS = tuple(compiled)
+    _EXTRA_FIELD_PATHS = paths
 
 
 def reset_redaction_rules():
     """Drop all user rules and fall back to the built-in blacklist only."""
-    global _EXTRA_HEADER_NAMES, _EXTRA_NAME_PATTERNS
+    global _EXTRA_HEADER_NAMES, _EXTRA_NAME_PATTERNS, _EXTRA_FIELD_PATHS
     _EXTRA_HEADER_NAMES = frozenset()
     _EXTRA_NAME_PATTERNS = ()
+    _EXTRA_FIELD_PATHS = ()
+
+
+def _matches_field_path(path: tuple[str, ...]) -> bool:
+    """True if a configured field-path matches ``path`` in full.
+
+    Match is exact-length: a configured ``data.user.note`` matches only the
+    ``note`` leaf, never the ``data.user`` object above it. Keys compare
+    case-insensitively (configured segments are lower-cased at parse time).
+    A ``*`` segment in the configured path matches any single key at that
+    position.
+    """
+    for cfg in _EXTRA_FIELD_PATHS:
+        if len(cfg) == len(path) and all(
+            c == "*" or c == p.lower() for c, p in zip(cfg, path)
+        ):
+            return True
+    return False
 
 
 def _is_sensitive_name(name: str) -> bool:
@@ -154,28 +203,36 @@ def redact_url(url, marker=REDACTED):
     return f"{base}{query_sep}{query}{hash_sep}{fragment}"
 
 
-def redact_body(body, marker=REDACTED):
-    """Recursively redact values whose key looks sensitive.
+def redact_body(body, marker=REDACTED, _path=()):
+    """Recursively redact values whose key looks sensitive or sits on a path.
 
     Walks dicts and lists. A dict value is replaced with ``marker`` if its
-    key matches SENSITIVE_NAME_PATTERN; lists and nested dicts are
-    walked further. Other types (str, int, bool, None) are returned as-is.
+    key matches SENSITIVE_NAME_PATTERN (or a user name rule), or if the
+    accumulated dict-key path to it matches a configured field-path (issue
+    #2); lists and nested dicts are walked further. Other types (str, int,
+    bool, None) are returned as-is.
+
+    Lists are transparent to field-paths: descending into a list keeps the
+    same accumulated path, so ``items.ref`` reaches every element of
+    ``{"items": [{"ref": ...}, ...]}``. Only string keys extend the path.
 
     Catches request payloads like {"password": "..."},
     {"client_secret": "..."}, OAuth {"refresh_token": "..."}.
     ``marker`` overrides the default ``***REDACTED***`` replacement string.
     """
     if isinstance(body, dict):
-        return {
-            k: (
-                marker
-                if isinstance(k, str) and _is_sensitive_name(k)
-                else redact_body(v, marker)
-            )
-            for k, v in body.items()
-        }
+        result = {}
+        for k, v in body.items():
+            child = _path + (k,) if isinstance(k, str) else _path
+            if isinstance(k, str) and (
+                _is_sensitive_name(k) or _matches_field_path(child)
+            ):
+                result[k] = marker
+            else:
+                result[k] = redact_body(v, marker, child)
+        return result
     if isinstance(body, list):
-        return [redact_body(item, marker) for item in body]
+        return [redact_body(item, marker, _path) for item in body]
     return body
 
 

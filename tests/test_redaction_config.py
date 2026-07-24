@@ -66,9 +66,10 @@ def test_install_extends_rather_than_replaces_defaults():
 
 
 def test_load_rules_absent_config_returns_empty(tmp_path):
-    names, patterns = load_redaction_rules(start_dir=tmp_path)
+    names, patterns, paths = load_redaction_rules(start_dir=tmp_path)
     assert names == []
     assert patterns == []
+    assert paths == []
 
 
 def test_load_rules_reads_toml(tmp_path):
@@ -78,7 +79,7 @@ def test_load_rules_reads_toml(tmp_path):
         'extra_field_patterns = ["ssn", "account_number"]\n',
         encoding="utf-8",
     )
-    names, patterns = load_redaction_rules(start_dir=tmp_path)
+    names, patterns, _paths = load_redaction_rules(start_dir=tmp_path)
     assert names == ["x-tenant-ref", "x-internal-token"]
     assert patterns == ["ssn", "account_number"]
 
@@ -88,7 +89,7 @@ def test_load_rules_invalid_regex_raises_clear_error(tmp_path):
         '[redaction]\nextra_field_patterns = ["(unclosed"]\n', encoding="utf-8"
     )
     with pytest.raises(ValueError, match="invalid redaction regex"):
-        names, patterns = load_redaction_rules(start_dir=tmp_path)
+        _names, patterns, _paths = load_redaction_rules(start_dir=tmp_path)
         parser.install_redaction_rules(extra_field_patterns=patterns)
 
 
@@ -96,9 +97,11 @@ def test_end_to_end_load_then_install(tmp_path):
     (tmp_path / "secure-log2test.toml").write_text(
         '[redaction]\nextra_field_patterns = ["ssn"]\n', encoding="utf-8"
     )
-    names, patterns = load_redaction_rules(start_dir=tmp_path)
+    names, patterns, paths = load_redaction_rules(start_dir=tmp_path)
     parser.install_redaction_rules(
-        extra_header_names=names, extra_field_patterns=patterns
+        extra_header_names=names,
+        extra_field_patterns=patterns,
+        extra_field_paths=paths,
     )
     assert redact_body({"ssn": "1"})["ssn"] == REDACTED
 
