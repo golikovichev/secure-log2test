@@ -4,6 +4,8 @@ All notable changes to this project will be documented here. Format is loosely b
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-25
+
 ### Added
 - Custom redaction rules via a project config file (closes the config-driven part of #2). A `secure-log2test.toml` in the working directory may carry a `[redaction]` table with `extra_header_names` (exact header names) and `extra_field_patterns` (regexes matched as a substring against header, body-field, and URL-parameter names, the same surface the built-in matcher uses). The built-in blacklist always stays on; config only adds. Rules load and install at CLI startup through a new `core/redaction_config.py`; a pattern that does not compile fails fast with a clear `ValueError` naming the offending regex. Config is parsed with the standard-library `tomllib` on Python 3.11+ and `tomli` on 3.10. 13 tests in `tests/test_redaction_config.py`.
 - JSON-path body-field redaction via config (closes the last open box of #2). The `[redaction]` table now also accepts `extra_field_paths`, a list of `a.b.c` dict-key paths whose value is redacted by position rather than by name. This catches a body field whose key is innocuous but whose value is sensitive (a free-text note, an internal reference id) that the name-based matcher cannot see. A path matches in full only (`data.user.note` redacts the `note` leaf, never the `data.user` object above it); a `*` segment matches any one key (`data.*.token`); lists are transparent so `items.ref` reaches every element. Paths install through the same `install_redaction_rules` all-or-nothing gate, and a malformed path (empty path or an empty segment such as `a..b`) fails fast with a clear `ValueError`. 11 tests in `tests/test_redaction_field_paths.py`.
