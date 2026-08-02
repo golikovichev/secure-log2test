@@ -15,7 +15,7 @@ Turn a Kibana or Splunk API log export into an executable pytest suite. Auth hea
 
 ![secure-log2test demo](assets/demo.gif)
 
-Status: v1.2.0 on PyPI. Stable per semver. Active roadmap, see open issues.
+Status: v1.3.0 on PyPI. Stable per semver.
 
 📖 **[Read the design write-up on Dev.to](https://dev.to/golikovichev/your-kibana-logs-are-full-of-test-cases-here-is-a-cli-that-extracts-them-with-auth-scrubbed-by-4433)**: privacy constraint, three-layer redaction, the v1.0.0 to v1.0.1 user-feedback story.
 
@@ -158,13 +158,13 @@ The `Authorization` value never leaves the parser intact. You set the real token
 
 ## Limitations
 
-What v1.0.1 does **not** handle yet. Calling them out so the tool stays trustworthy.
+What v1.3.0 does **not** handle yet. Calling them out so the tool stays trustworthy.
 
 - Input shapes other than Kibana (Elasticsearch `hits`), Splunk (CSV / JSON), and Grafana Loki Explore (CSV / JSON) search exports.
 - Single-file input. Multi-file batch mode is on the roadmap.
 - Output format: pytest, JSON, or CSV.
 - Nested and repeated JSON fields in body assertions. `expect_fields` compares top-level keys only (see [Response body assertions](#response-body-assertions)); deeper paths are not matched yet.
-- JSON-path body-field redaction. Custom header names and field-name patterns now load from `secure-log2test.toml` (see [Custom redaction rules](#custom-redaction-rules)); redacting a specific nested JSON path is still open on [#2](https://github.com/golikovichev/secure-log2test/issues/2).
+- Redacting a JSON body field whose key literally contains a dot. Nested-path redaction via `extra_field_paths` treats `.` as a segment separator (see [Custom redaction rules](#custom-redaction-rules)), so a key that itself contains a dot cannot be targeted.
 - OAuth replay. Only static `Authorization` headers, redacted to a placeholder.
 - Multipart bodies and file uploads.
 - Streaming responses or chunked transfer.
@@ -175,10 +175,11 @@ If something on this list blocks you, open an issue.
 
 | Version | Tracks | Adds |
 | --- | --- | --- |
-| Unreleased | [#1](https://github.com/golikovichev/secure-log2test/issues/1) | Response body assertions plus optional schema match (landed, see [Response body assertions](#response-body-assertions)). |
-| Unreleased | [#2](https://github.com/golikovichev/secure-log2test/issues/2) | Custom redaction rules via config file. Config-driven header names and field-name patterns landed (see [Custom redaction rules](#custom-redaction-rules)); JSON-path body redaction still open. |
+| v1.3.0 | [#1](https://github.com/golikovichev/secure-log2test/issues/1) | Response body assertions plus optional schema match (landed, see [Response body assertions](#response-body-assertions)). |
+| v1.3.0 | [#2](https://github.com/golikovichev/secure-log2test/issues/2) | Custom redaction rules via config file: config-driven header names, field-name patterns, and JSON-path body redaction (landed, see [Custom redaction rules](#custom-redaction-rules)). |
+| v1.3.0 | [#4](https://github.com/golikovichev/secure-log2test/issues/4) | Grafana Loki Explore export support (landed). |
 
-Open the [issue tracker](https://github.com/golikovichev/secure-log2test/issues) for the live picture; two `good first issue` slots are currently open if you want to jump in.
+Every tracked roadmap issue has shipped as of v1.3.0. The next direction is multi-file batch input (see [Limitations](#limitations)). Open the [issue tracker](https://github.com/golikovichev/secure-log2test/issues) for the live picture.
 
 ## Tests
 
