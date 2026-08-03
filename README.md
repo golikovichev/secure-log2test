@@ -179,7 +179,13 @@ If something on this list blocks you, open an issue.
 | v1.3.0 | [#2](https://github.com/golikovichev/secure-log2test/issues/2) | Custom redaction rules via config file: config-driven header names, field-name patterns, and JSON-path body redaction (landed, see [Custom redaction rules](#custom-redaction-rules)). |
 | v1.3.0 | [#4](https://github.com/golikovichev/secure-log2test/issues/4) | Grafana Loki Explore export support (landed). |
 
-Every tracked roadmap issue has shipped as of v1.3.0. The next direction is multi-file batch input (see [Limitations](#limitations)). Open the [issue tracker](https://github.com/golikovichev/secure-log2test/issues) for the live picture.
+Every tracked roadmap issue has shipped as of v1.3.0. Directions under consideration, roughly in order:
+
+- Multi-file batch input (see [Limitations](#limitations)), so a directory of exports generates one suite instead of one file at a time.
+- A direct Elasticsearch source, reading matched requests and responses straight from the ES API instead of a saved Kibana export.
+- Edge-case radar: scan the log set for rare status codes and unusual parameter shapes and surface them as test candidates, rather than replaying only the common path.
+
+Open the [issue tracker](https://github.com/golikovichev/secure-log2test/issues) for the live picture.
 
 ## Tests
 
